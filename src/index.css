@@ -1,96 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 20% 98%;
+    --foreground: 210 50% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 210 50% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 210 50% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 209 100% 34%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 30% 95%;
+    --secondary-foreground: 209 100% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 210 10% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 180 99% 36%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 210 20% 90%;
+    --input: 210 20% 90%;
+    --ring: 209 100% 34%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* HireNowX custom tokens */
+    --navy: 209 100% 17%;
+    --navy-foreground: 0 0% 100%;
+    --blue: 209 100% 34%;
+    --blue-light: 209 80% 95%;
+    --teal: 180 99% 36%;
+    --teal-light: 180 60% 94%;
+    --green: 156 100% 45%;
+    --green-light: 156 60% 94%;
+    --warning: 38 92% 50%;
+    --warning-light: 38 80% 94%;
+    --danger: 0 84% 60%;
+    --danger-light: 0 60% 95%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-background: 209 100% 17%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 180 99% 36%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 209 80% 22%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 209 60% 25%;
+    --sidebar-ring: 180 99% 36%;
+
+    --confidence-high: 156 100% 45%;
+    --confidence-medium: 38 92% 50%;
+    --confidence-low: 0 84% 60%;
+
+    --step-active: 209 100% 34%;
+    --step-complete: 180 99% 36%;
+    --step-pending: 210 20% 80%;
   }
 }
 
@@ -100,6 +75,83 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .hnx-card {
+    @apply bg-card rounded-xl border shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  .hnx-card-header {
+    @apply px-6 py-4 border-b bg-muted/30 rounded-t-xl;
+  }
+
+  .hnx-badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .hnx-chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors;
+  }
+
+  .hnx-progress-bar {
+    @apply h-2 rounded-full overflow-hidden bg-muted;
+  }
+
+  .hnx-section-title {
+    @apply text-lg font-semibold text-foreground tracking-tight;
+  }
+
+  .hnx-label {
+    @apply text-sm font-medium text-muted-foreground;
+  }
+
+  .hnx-value {
+    @apply text-sm font-semibold text-foreground;
+  }
+
+  .hnx-stepper-active {
+    @apply bg-primary text-primary-foreground shadow-lg shadow-primary/25;
+  }
+
+  .hnx-stepper-complete {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .hnx-stepper-pending {
+    @apply bg-muted text-muted-foreground;
+  }
+}
+
+@layer utilities {
+  .text-navy { color: hsl(var(--navy)); }
+  .bg-navy { background-color: hsl(var(--navy)); }
+  .text-teal { color: hsl(var(--teal)); }
+  .bg-teal { background-color: hsl(var(--teal)); }
+  .text-hnx-green { color: hsl(var(--green)); }
+  .bg-hnx-green { background-color: hsl(var(--green)); }
+  .bg-blue-light { background-color: hsl(var(--blue-light)); }
+  .bg-teal-light { background-color: hsl(var(--teal-light)); }
+  .bg-green-light { background-color: hsl(var(--green-light)); }
+  .bg-warning-light { background-color: hsl(var(--warning-light)); }
+  .bg-danger-light { background-color: hsl(var(--danger-light)); }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .gradient-navy {
+    background: linear-gradient(135deg, hsl(209 100% 17%), hsl(209 100% 25%));
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(209 100% 34%), hsl(180 99% 36%));
+  }
+
+  .gradient-accent {
+    background: linear-gradient(135deg, hsl(180 99% 36%), hsl(156 100% 45%));
   }
 }
