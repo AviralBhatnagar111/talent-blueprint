@@ -15,10 +15,11 @@ export const ROUND_META: Record<RoundType, { icon: any; name: string; descriptio
   FinalApproval: { icon: CheckCircle2, name: 'Final Approval', description: 'Final hiring decision and offer extension', tone: 'bg-green-light text-hnxgreen-deep' },
 };
 
-export function RoundTypeIcon({ type, size = 'md' }: { type: RoundType; size?: 'sm' | 'md' | 'lg' }) {
+export function RoundTypeIcon({ type, size = 'md' }: { type: RoundType; size?: 'xs' | 'sm' | 'md' | 'lg' }) {
   const meta = ROUND_META[type];
   const Icon = meta.icon;
   const sizes = {
+    xs: 'w-5 h-5 [&>svg]:w-3 [&>svg]:h-3',
     sm: 'w-7 h-7 [&>svg]:w-3.5 [&>svg]:h-3.5',
     md: 'w-9 h-9 [&>svg]:w-4 [&>svg]:h-4',
     lg: 'w-11 h-11 [&>svg]:w-5 [&>svg]:h-5',

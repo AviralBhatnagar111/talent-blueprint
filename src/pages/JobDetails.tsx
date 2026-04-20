@@ -194,7 +194,7 @@ export default function JobDetails() {
                       )}>
                         <div className="flex items-center gap-1.5 mb-2">
                           <RoundTypeIcon type={r.type} size="xs" />
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground truncate">{meta.shortName ?? meta.name}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground truncate">{meta.name.replace(' Assessment', '').replace(' Interview', '')}</span>
                         </div>
                         <p className="text-[18px] font-bold text-navy tabular-nums leading-none">{count}</p>
                         <p className="text-[10px] text-muted-foreground mt-1 truncate">{r.label}</p>
@@ -434,7 +434,7 @@ export default function JobDetails() {
 function ActionButton({
   icon: Icon, label, sub, tone, onClick, disabled, primary,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: React.ElementType;
   label: string; sub: string;
   tone: 'green' | 'teal' | 'navy' | 'amber' | 'muted';
   onClick: () => void; disabled?: boolean; primary?: boolean;
@@ -468,7 +468,7 @@ function ActionButton({
   );
 }
 
-function Ribbon({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
+function Ribbon({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-center gap-2.5">
       <div className="w-8 h-8 rounded-md bg-card border border-border/60 flex items-center justify-center shrink-0">
@@ -510,7 +510,7 @@ function ReadinessRow({ label, status }: { label: string; status: string }) {
   );
 }
 
-function QuickAction({ icon: Icon, label, onClick }: { icon: React.ComponentType<{ className?: string }>; label: string; onClick: () => void }) {
+function QuickAction({ icon: Icon, label, onClick }: { icon: React.ElementType; label: string; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -533,7 +533,7 @@ function StatRow({ label, value, muted }: { label: string; value: number; muted?
   );
 }
 
-function DetailRow({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
+function DetailRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
     <div className="flex items-start gap-2.5">
       <Icon className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
