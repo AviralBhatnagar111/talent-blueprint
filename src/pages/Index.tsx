@@ -1,56 +1,39 @@
-import { Link } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { Layers, BrainCircuit, Code2, ArrowRight, BarChart3, Users, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Sparkles, Layers, BrainCircuit, Code2 } from 'lucide-react';
 
 export default function Index() {
-  const cards = [
-    { title: 'Hiring Plan Builder', desc: 'Design end-to-end evaluation journeys with competency-driven round planning.', icon: Layers, url: '/hiring-plan', color: 'bg-primary/10 text-primary' },
-    { title: 'MCQ Assessment Builder', desc: 'Create role-aware, AI-powered MCQ assessments with quality confidence.', icon: BrainCircuit, url: '/mcq-builder', color: 'bg-teal-light text-teal' },
-    { title: 'Coding Assessment Builder', desc: 'Build coding challenges with language support, test cases, and scoring logic.', icon: Code2, url: '/coding-builder', color: 'bg-green-light text-hnxgreen' },
-  ];
-
-  const stats = [
-    { label: 'Active Plans', value: '12', icon: FileText },
-    { label: 'Assessments', value: '34', icon: BarChart3 },
-    { label: 'Candidates', value: '256', icon: Users },
-  ];
-
   return (
     <AppLayout>
-      <div className="p-6 max-w-[1200px] mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold">Welcome back, Sarah</h1>
-          <p className="text-sm text-muted-foreground mt-1">Build competency-driven hiring plans and assessments.</p>
+      <div className="p-8 max-w-[1200px] mx-auto">
+        <div className="mb-8 flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">HireNowX · Revamp in Progress</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Foundations (design tokens, types, mock data for both Engineering and Sales templates) are ready.
+              The three builders — Job Template, MCQ, Coding — will be implemented next against the new type system.
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          {stats.map(s => (
-            <div key={s.label} className="hnx-card p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <s.icon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <h2 className="text-lg font-semibold mb-4">Build</h2>
         <div className="grid grid-cols-3 gap-5">
-          {cards.map(card => (
-            <Link key={card.url} to={card.url} className="hnx-card p-6 group hover:shadow-lg transition-all">
-              <div className={`w-12 h-12 rounded-xl ${card.color} flex items-center justify-center mb-4`}>
-                <card.icon className="w-6 h-6" />
+          {[
+            { icon: Layers, title: 'Job Template Builder', desc: 'Round sequence planner with AI recommendations and drag-reorder.' },
+            { icon: BrainCircuit, title: 'MCQ Assessment Builder', desc: '3-step flow: Confirm Context → Generate → Review & Finalize.' },
+            { icon: Code2, title: 'Coding Assessment Builder', desc: 'First-class coding flow with test cases, languages, integrity.' },
+          ].map(c => (
+            <div key={c.title} className="hnx-card p-6">
+              <div className="w-10 h-10 rounded-lg bg-teal-light text-teal flex items-center justify-center mb-3">
+                <c.icon className="w-5 h-5" />
               </div>
-              <h3 className="font-semibold mb-2">{card.title}</h3>
-              <p className="text-sm text-muted-foreground mb-4">{card.desc}</p>
-              <span className="text-sm font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                Open Builder <ArrowRight className="w-4 h-4" />
+              <h3 className="font-semibold text-navy mb-1">{c.title}</h3>
+              <p className="text-sm text-muted-foreground">{c.desc}</p>
+              <span className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                <span className="hnx-dot bg-warning" /> Scaffolding
               </span>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
