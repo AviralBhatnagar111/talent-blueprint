@@ -25,9 +25,11 @@ import type { MCQBlueprint, MCQQuestion, MCQType } from '@/types/hirenowx';
 
 const STEPS = [
   { number: 1, label: 'Confirm Context' },
-  { number: 2, label: 'Generate Questions' },
+  { number: 2, label: 'Question Pool' },
   { number: 3, label: 'Review & Finalize' },
 ];
+
+type PoolTab = 'ai' | 'upload' | 'all';
 
 export default function MCQBuilder() {
   const { jobId, roundId } = useParams<{ jobId: string; roundId: string }>();
@@ -48,6 +50,7 @@ export default function MCQBuilder() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showFinalQuestions, setShowFinalQuestions] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [poolTab, setPoolTab] = useState<PoolTab>('all');
   const [assessmentName, setAssessmentName] = useState('Technical MCQ — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
 
@@ -61,7 +64,8 @@ export default function MCQBuilder() {
   };
   const handleGenComplete = () => {
     setGenerating(false);
-    setQuestions(getSampleMCQ());
+    setQuestions(getSampleMCQ().map((q, i) => ({ ...q, id: `ai-${Date.now()}-${i}` })));
+    setPoolTab('ai');
   };
 
   const approved = questions.filter(q => q.status === 'approved').length;
@@ -89,15 +93,21 @@ export default function MCQBuilder() {
   const addManualQuestion = (question: MCQQuestion) => {
     setQuestions(qs => [question, ...qs]);
     setStep(2);
+    setPoolTab('upload');
     toast.success('Question added to pool');
   };
 
   const importQuestions = (items: MCQQuestion[]) => {
     setQuestions(qs => [...items, ...qs]);
     setStep(2);
+    setPoolTab('upload');
     setShowBulkImport(false);
     toast.success('Questions imported', { description: `${items.length} questions added to the pool` });
   };
+
+  const visibleQuestions = questions.filter(q => poolTab === 'all' || (poolTab === 'ai' ? q.id.startsWith('ai-') : !q.id.startsWith('ai-')));
+  const aiCount = questions.filter(q => q.id.startsWith('ai-')).length;
+  const uploadCount = questions.length - aiCount;
 
   const difficulty = {
     easy: questions.filter(q => q.difficulty === 'Easy').length,
