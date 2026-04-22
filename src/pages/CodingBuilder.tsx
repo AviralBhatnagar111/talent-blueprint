@@ -566,6 +566,31 @@ function DetailBlock({ title, children }: { title: string; children: React.React
   );
 }
 
+function ManualCodingModal({ onClose, onAdd, competencyName, skillTag, languages }: { onClose: () => void; onAdd: (p: CodingProblem) => void; competencyName: string; skillTag: string; languages: CodingLanguage[] }) {
+  const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
+  const [statement, setStatement] = useState('');
+  const [difficulty, setDifficulty] = useState<CodingProblem['difficulty']>('Medium');
+  const submit = () => {
+    if (!title.trim() || !statement.trim()) return toast.error('Add problem title and statement');
+    onAdd({ id: `manual-coding-${Date.now()}`, title, summary: summary || title, fullStatement: statement, ioFormat: { input: 'Standard input', output: 'Expected output' }, constraints: ['Input size follows role-appropriate limits'], sampleCases: [{ input: 'sample input', output: 'sample output', explanation: 'Validates the core behavior.' }], hiddenCaseCount: 8, expectedComplexity: { time: 'O(n)', space: 'O(1)' }, scoring: { maxPoints: 100, perTestCase: 10 }, competencyId: 'manual', competencyName, skillTag, difficulty, problemType: 'Implementation', languagesSupported: languages, estimatedSolveTimeMin: 45, rationale: 'Manually added by recruiter for this coding round.', status: 'pending', freshness: 'new', highRoleFit: true });
+    onClose();
+  };
+  return <ModalShell title="Add Coding Problem Manually" onClose={onClose}><div className="space-y-3"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Problem title" className="hnx-input w-full" /><input value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Short summary" className="hnx-input w-full" /><textarea value={statement} onChange={(e) => setStatement(e.target.value)} placeholder="Problem statement, input/output expectations, constraints" className="hnx-input min-h-40 w-full" /><select value={difficulty} onChange={(e) => setDifficulty(e.target.value as CodingProblem['difficulty'])} className="hnx-input w-full"><option>Easy</option><option>Medium</option><option>Hard</option></select><Button className="w-full bg-primary" onClick={submit}>Add to Pool</Button></div></ModalShell>;
+}
+
+function FinalProblemsOverlay({ problems, onClose }: { problems: CodingProblem[]; onClose: () => void }) {
+  return <ModalShell title="Final Coding Problems" onClose={onClose} wide><div className="space-y-3 max-h-[70vh] overflow-auto pr-2">{problems.filter(p => p.status === 'approved').map((p, i) => <CodingCard key={p.id} problem={p} index={i} expanded={false} onToggleExpand={() => undefined} onUpdate={() => undefined} />)}</div></ModalShell>;
+}
+
+function SaveConfirmOverlay({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  return <ModalShell title="Save Coding Assessment" onClose={onClose}><div className="space-y-4"><div className="p-4 rounded-lg bg-danger-light border border-destructive/20"><p className="text-[13px] font-semibold text-navy">This action cannot be reverted.</p><p className="text-[12px] text-muted-foreground mt-1">Saving attaches the final coding test to this round for operational use.</p></div><div className="flex gap-2 justify-end"><Button variant="outline" onClick={onClose}>Cancel</Button><Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={onConfirm}>Confirm & Save</Button></div></div></ModalShell>;
+}
+
+function ModalShell({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+  return <div className="fixed inset-0 z-[80] bg-navy/40 backdrop-blur-sm flex items-center justify-center p-6"><div className={cn('hnx-card p-5 shadow-2xl animate-fade-in max-h-[88vh] overflow-hidden', wide ? 'w-full max-w-5xl' : 'w-full max-w-xl')}><div className="flex items-center justify-between mb-4"><h3 className="text-[16px] font-bold text-navy">{title}</h3><button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-muted flex items-center justify-center"><X className="w-4 h-4" /></button></div>{children}</div></div>;
+}
+
 function Stat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'green' | 'warn' }) {
   const tones = { default: 'text-foreground', green: 'text-hnxgreen-deep', warn: 'text-warning' };
   return (
