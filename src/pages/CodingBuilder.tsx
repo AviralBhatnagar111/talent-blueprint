@@ -362,7 +362,10 @@ module.exports = solution;`}
                 </div>
                 <div className="mt-5 pt-4 border-t flex flex-col gap-2">
                   <Button variant="outline" className="w-full" onClick={() => setStep(2)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
-                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={save}>
+                  <Button variant="outline" className="w-full" onClick={() => setShowFinalProblems(true)}>
+                    <Eye className="w-4 h-4 mr-1.5" />View Final Problems
+                  </Button>
+                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={() => setShowSaveConfirm(true)}>
                     <CheckCircle2 className="w-4 h-4 mr-1.5" />Save & Attach
                   </Button>
                 </div>
@@ -423,6 +426,10 @@ module.exports = solution;`}
           )}
         </IntelligencePanel>
       </div>
+
+      {showManualAdd && <ManualCodingModal onClose={() => setShowManualAdd(false)} onAdd={addManualProblem} competencyName={job.competencies[0]?.name || 'Technical Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} languages={blueprint.languages} />}
+      {showFinalProblems && <FinalProblemsOverlay problems={problems} onClose={() => setShowFinalProblems(false)} />}
+      {showSaveConfirm && <SaveConfirmOverlay onClose={() => setShowSaveConfirm(false)} onConfirm={save} />}
     </AppLayout>
   );
 }
