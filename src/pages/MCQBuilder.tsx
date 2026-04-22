@@ -6,8 +6,8 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Pencil, Check, X,
-  RefreshCw, Lock, Unlock, Trash2, Search, Filter, AlertTriangle, Shield,
-  CheckCircle2, Clock, Eye, Minus, Plus, Zap,
+  Upload, FilePlus2, AlertTriangle, Shield, CheckCircle2, Eye,
+  Minus, Plus, Zap, ListChecks,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
@@ -45,8 +45,10 @@ export default function MCQBuilder() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<MCQQuestion[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unapproved' | 'flagged'>('all');
-  const [searchQ, setSearchQ] = useState('');
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [showFinalQuestions, setShowFinalQuestions] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [assessmentName, setAssessmentName] = useState('Technical MCQ — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
 
@@ -64,16 +66,8 @@ export default function MCQBuilder() {
   };
 
   const approved = questions.filter(q => q.status === 'approved').length;
-  const flagged = questions.filter(q => q.status === 'flagged').length;
   const pending = questions.filter(q => q.status === 'pending').length;
   const allApproved = questions.length > 0 && approved === questions.length;
-
-  const filtered = questions.filter(q => {
-    if (filter === 'unapproved' && q.status === 'approved') return false;
-    if (filter === 'flagged' && q.status !== 'flagged') return false;
-    if (searchQ && !q.text.toLowerCase().includes(searchQ.toLowerCase())) return false;
-    return true;
-  });
 
   const updateQuestion = (id: string, patch: Partial<MCQQuestion>) =>
     setQuestions(qs => qs.map(q => q.id === id ? { ...q, ...patch } : q));
@@ -90,7 +84,20 @@ export default function MCQBuilder() {
       status: 'ready',
     });
     toast.success('MCQ Assessment saved & attached', { description: `${blueprint.questionsToSend} questions attached to ${round.label}` });
-    navigate(`/jobs/${job.id}/template`);
+    navigate(`/jobs/${job.id}`);
+  };
+
+  const addManualQuestion = (question: MCQQuestion) => {
+    setQuestions(qs => [question, ...qs]);
+    setStep(2);
+    toast.success('Question added to pool');
+  };
+
+  const importQuestions = (items: MCQQuestion[]) => {
+    setQuestions(qs => [...items, ...qs]);
+    setStep(2);
+    setShowBulkImport(false);
+    toast.success('Questions imported', { description: `${items.length} questions added to the pool` });
   };
 
   const difficulty = {
@@ -119,7 +126,7 @@ export default function MCQBuilder() {
             <Button
               size="sm"
               className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold h-8"
-              onClick={save}
+              onClick={() => setShowSaveConfirm(true)}
               disabled={step !== 3 || !allApproved}
             >
               Save & Attach to Round
