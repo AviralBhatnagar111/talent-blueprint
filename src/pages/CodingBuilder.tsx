@@ -178,8 +178,11 @@ export default function CodingBuilder() {
                   <NumberStepper label="Problems to send" value={blueprint.problemsToSend} step={1} onChange={(v) => setBlueprint({ ...blueprint, problemsToSend: v })} suffix="problems" />
                   <NumberStepper label="Duration" value={blueprint.durationMin} step={15} onChange={(v) => setBlueprint({ ...blueprint, durationMin: v })} suffix="minutes" />
                   <div>
-                    <span className="hnx-label block mb-2">Difficulty Mix</span>
-                    <DifficultyBar easy={blueprint.difficultyMix.easy} medium={blueprint.difficultyMix.medium} hard={blueprint.difficultyMix.hard} />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="hnx-label">Difficulty Mix</span>
+                      <span className="text-[11px] text-muted-foreground">Editable AI target</span>
+                    </div>
+                    <DifficultyMixEditor value={blueprint.difficultyMix} onChange={(difficultyMix) => setBlueprint({ ...blueprint, difficultyMix })} />
                   </div>
                   <div>
                     <span className="hnx-label block mb-1.5">Problem Types</span>
@@ -246,11 +249,19 @@ export default function CodingBuilder() {
           {/* STEP 2 */}
           {step === 2 && !generating && problems.length > 0 && (
             <div className="space-y-3 animate-fade-in">
-              <div className="hnx-card p-3 flex items-center gap-2">
-                <span className="text-[12px] font-semibold text-navy">{problems.length} problems generated</span>
-                <span className="text-[11px] text-muted-foreground">· {approved}/{problems.length} approved</span>
-                <Button size="sm" variant="outline" className="h-8 text-[12px] ml-auto" onClick={() => setProblems(ps => ps.map(p => ({ ...p, status: 'approved' })))}>
+              <div className="hnx-card p-4 flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-3 mr-auto">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Code2 className="w-4 h-4" strokeWidth={2.5} /></div>
+                  <div>
+                    <h2 className="text-[15px] font-bold text-navy">Problem Pool</h2>
+                    <p className="text-[12px] text-muted-foreground">Pool target {blueprint.poolSize}; approve {blueprint.problemsToSend} final coding problems.</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setProblems(ps => ps.map(p => ({ ...p, status: 'approved' })))}>
                   <Check className="w-3.5 h-3.5 mr-1" />Approve All
+                </Button>
+                <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
+                  <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Problem Manually
                 </Button>
               </div>
 
@@ -267,7 +278,7 @@ export default function CodingBuilder() {
 
               <div className="flex justify-between items-center pt-2">
                 <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
-                <Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold" onClick={() => setStep(3)} disabled={!allApproved}>
+                  <Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold" onClick={() => setStep(3)} disabled={!allApproved}>
                   Continue to Finalize<ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Button>
               </div>
