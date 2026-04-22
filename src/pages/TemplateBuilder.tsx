@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
-  GripVertical, Plus, Trash2, Copy, Sparkles, X, ChevronDown, ChevronRight,
-  CheckCircle2, AlertCircle, Lightbulb, Save, ArrowRight, Eye, Clock,
+  GripVertical, Plus, Trash2, Sparkles, X, ChevronDown, ChevronRight,
+  AlertCircle, Save, Clock,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { ROUND_META, RoundTypeIcon } from '@/components/shared/RoundIcon';
@@ -22,7 +22,6 @@ const ADDABLE_ROUND_TYPES: RoundType[] = ['Screening', 'MCQ', 'Coding', 'AIInter
 
 export default function TemplateBuilder() {
   const { jobId } = useParams<{ jobId: string }>();
-  const navigate = useNavigate();
   const job = useStore(s => s.getJob(jobId!));
   const updateRounds = useStore(s => s.updateJobRounds);
 
@@ -30,7 +29,7 @@ export default function TemplateBuilder() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<Record<string, string[]>>({});
 
   if (!job) {
     return <AppLayout bare><div className="p-8">Job not found.</div></AppLayout>;
@@ -41,6 +40,11 @@ export default function TemplateBuilder() {
   const readyCount = rounds.filter(r => r.assessmentStatus === 'ready').length;
   const assessmentRounds = rounds.filter(r => r.type === 'MCQ' || r.type === 'Coding');
   const notBuiltAssessments = assessmentRounds.filter(r => r.assessmentStatus === 'not_built');
+  const assessableSkills = Array.from(new Set([
+    ...job.roleContext.primarySkills,
+    ...job.roleContext.secondarySkills,
+    ...job.competencies.map(c => c.name),
+  ]));
 
   const readiness = Math.round(
     (rounds.length >= 3 ? 30 : 10) +
@@ -74,16 +78,6 @@ export default function TemplateBuilder() {
     updateRounds(job.id, rounds.filter(r => r.id !== id));
     toast('Round removed');
   };
-  const duplicateRound = (id: string) => {
-    const src = rounds.find(r => r.id === id);
-    if (!src) return;
-    const copy: Round = { ...src, id: `r-${Date.now()}`, label: src.label + ' (copy)', assessmentStatus: 'not_built', assessmentId: undefined };
-    const idx = rounds.findIndex(r => r.id === id);
-    const next = [...rounds];
-    next.splice(idx + 1, 0, copy);
-    updateRounds(job.id, next);
-    toast('Round duplicated');
-  };
   const addRound = (type: RoundType) => {
     const meta = ROUND_META[type];
     const newRound: Round = {
@@ -103,7 +97,11 @@ export default function TemplateBuilder() {
   };
 
   const saveTemplate = () => {
-    toast.success('Template saved', { description: 'Your hiring plan is ready to use.' });
+    toast.success('Job template saved', { description: 'Your round plan is ready to use.' });
+  };
+
+  const updateRoundSkills = (roundId: string, skills: string[]) => {
+    setSelectedSkills(prev => ({ ...prev, [roundId]: skills }));
   };
 
   return (
@@ -113,7 +111,7 @@ export default function TemplateBuilder() {
         backLabel="Job Details"
         breadcrumbs={[
           { label: job.title, to: `/jobs/${job.id}` },
-          { label: 'Hiring Plan' },
+          { label: 'Job Template' },
         ]}
         chips={
           <>
@@ -145,7 +143,7 @@ export default function TemplateBuilder() {
         <div className="min-w-0 space-y-5">
           <div className="flex items-end justify-between">
             <div>
-              <h1 className="text-[22px] font-bold tracking-tight text-navy">Hiring Plan</h1>
+              <h1 className="text-[22px] font-bold tracking-tight text-navy">Job Template</h1>
               <p className="text-[13px] text-muted-foreground mt-0.5">Design the candidate evaluation journey for this role</p>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -191,15 +189,13 @@ export default function TemplateBuilder() {
                 onToggleExpand={() => toggleExpand(round.id)}
                 onUpdate={(patch) => updateRound(round.id, patch)}
                 onDelete={() => deleteRound(round.id)}
-                onDuplicate={() => duplicateRound(round.id)}
                 onDragStart={() => handleDragStart(round.id)}
                 onDragOver={(e) => handleDragOver(e, round.id)}
                 onDragEnd={() => setDragId(null)}
                 isDragging={dragId === round.id}
-                onBuildAssessment={() => {
-                  if (round.type === 'MCQ') navigate(`/jobs/${job.id}/template/rounds/${round.id}/mcq-builder`);
-                  else if (round.type === 'Coding') navigate(`/jobs/${job.id}/template/rounds/${round.id}/coding-builder`);
-                }}
+                skills={assessableSkills}
+                selectedSkills={selectedSkills[round.id] || []}
+                onSkillsChange={(skills) => updateRoundSkills(round.id, skills)}
               />
             ))}
           </div>
@@ -261,14 +257,7 @@ export default function TemplateBuilder() {
               </ChecklistItem>
               {notBuiltAssessments.map(r => (
                 <ChecklistItem key={r.id} icon={AlertCircle} tone="warn">
-                  {r.label} not yet built —{' '}
-                  <button
-                    className="text-teal-deep font-semibold hover:underline"
-                    onClick={() => {
-                      if (r.type === 'MCQ') navigate(`/jobs/${job.id}/template/rounds/${r.id}/mcq-builder`);
-                      if (r.type === 'Coding') navigate(`/jobs/${job.id}/template/rounds/${r.id}/coding-builder`);
-                    }}
-                  >build now</button>
+                  {r.label} assessment not ready
                 </ChecklistItem>
               ))}
               <ChecklistItem tone="info" icon={Clock}>
@@ -293,13 +282,8 @@ export default function TemplateBuilder() {
             </div>
           </PanelSection>
 
-          <Button onClick={() => setPreviewOpen(true)} variant="outline" className="w-full h-9 text-[12px]">
-            <Eye className="w-3.5 h-3.5 mr-1.5" />Preview Candidate Journey
-          </Button>
         </IntelligencePanel>
       </div>
-
-      {previewOpen && <CandidateJourneyPreview job={job} onClose={() => setPreviewOpen(false)} />}
     </AppLayout>
   );
 }
@@ -307,8 +291,8 @@ export default function TemplateBuilder() {
 // ============== Round Card ==============
 
 function RoundCard({
-  round, index, expanded, onToggleExpand, onUpdate, onDelete, onDuplicate,
-  onDragStart, onDragOver, onDragEnd, isDragging, onBuildAssessment,
+  round, index, expanded, onToggleExpand, onUpdate, onDelete,
+  onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange,
 }: {
   round: Round;
   index: number;
@@ -316,16 +300,23 @@ function RoundCard({
   onToggleExpand: () => void;
   onUpdate: (patch: Partial<Round>) => void;
   onDelete: () => void;
-  onDuplicate: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   isDragging: boolean;
-  onBuildAssessment: () => void;
+  skills: string[];
+  selectedSkills: string[];
+  onSkillsChange: (skills: string[]) => void;
 }) {
   const meta = ROUND_META[round.type];
   const isAssessment = round.type === 'MCQ' || round.type === 'Coding';
   const isReady = round.assessmentStatus === 'ready';
+  const toggleSkill = (skill: string) => {
+    onSkillsChange(selectedSkills.includes(skill)
+      ? selectedSkills.filter(s => s !== skill)
+      : [...selectedSkills, skill]
+    );
+  };
 
   return (
     <div
@@ -359,53 +350,18 @@ function RoundCard({
             onChange={(e) => onUpdate({ label: e.target.value })}
             className="text-[14px] font-bold text-navy bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 -mx-1 w-full max-w-md"
           />
-          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
-            <span>{meta.name}</span>
-            <span>·</span>
-            <span>{round.durationMin} min</span>
-            <span>·</span>
-            <span className={cn('font-medium', round.mandatory ? 'text-foreground' : 'text-muted-foreground')}>
-              {round.mandatory ? 'Mandatory' : 'Optional'}
-            </span>
-            <span>·</span>
-            <span>{round.autoTrigger ? 'Auto-trigger' : 'Manual'}</span>
+          <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
             {isAssessment && (
-              <>
-                <span>·</span>
-                <span className={cn('inline-flex items-center gap-1 font-semibold',
-                  isReady ? 'text-hnxgreen-deep' : 'text-warning')}>
-                  {isReady ? <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} /> : <AlertCircle className="w-3 h-3" strokeWidth={2.5} />}
-                  {isReady ? `Assessment Ready${round.assessmentMeta ? ` · ${round.assessmentMeta.count} ${round.assessmentMeta.unit}` : ''}` : 'Not built'}
-                </span>
-              </>
+              <span className={cn('inline-flex items-center gap-1 font-semibold', isReady ? 'text-hnxgreen-deep' : 'text-warning')}>
+                <AlertCircle className="w-3 h-3" strokeWidth={2.5} />
+                {isReady ? 'Assessment Ready' : 'Not built'}
+              </span>
             )}
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {isAssessment && (
-            <Button size="sm" onClick={onBuildAssessment} className={cn(
-              'h-8 text-[12px] font-semibold',
-              isReady ? 'bg-teal-light text-teal-deep border border-teal/30 hover:bg-teal-light/70' : 'bg-hnxgreen hover:bg-hnxgreen-deep text-navy'
-            )}>
-              {isReady ? 'Edit Assessment' : 'Build Assessment'}
-              <ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
-          {round.type === 'AIInterview' && (
-            <Button size="sm" variant="outline" className="h-8 text-[12px] border-teal/30 text-teal-deep hover:bg-teal-light/50">
-              Configure<ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
-          {round.type === 'ManualInterview' && (
-            <Button size="sm" variant="outline" className="h-8 text-[12px]">
-              Assign Panel<ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
-          <button onClick={onDuplicate} className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground" aria-label="Duplicate">
-            <Copy className="w-3.5 h-3.5" />
-          </button>
           <button onClick={onDelete} className="h-8 w-8 rounded-md hover:bg-destructive/10 hover:text-destructive flex items-center justify-center text-muted-foreground" aria-label="Delete">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -417,88 +373,32 @@ function RoundCard({
 
       {/* Expanded details */}
       {expanded && (
-        <div className="px-4 pb-4 pt-2 border-t border-border/50 bg-muted/20 grid grid-cols-2 gap-4 animate-fade-in-fast">
-          <div>
-            <label className="hnx-label block mb-1">Purpose</label>
-            <textarea
-              value={round.purpose || ''}
-              onChange={(e) => onUpdate({ purpose: e.target.value })}
-              placeholder="What does this round evaluate?"
-              className="w-full min-h-[60px] rounded-md border border-input bg-card p-2 text-[12px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-            />
-          </div>
-          <div>
-            <label className="hnx-label block mb-1">Notes</label>
-            <textarea
-              value={round.notes || ''}
-              onChange={(e) => onUpdate({ notes: e.target.value })}
-              placeholder="Internal notes for evaluators"
-              className="w-full min-h-[60px] rounded-md border border-input bg-card p-2 text-[12px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="hnx-label block mb-1">Duration</label>
-              <div className="flex items-center gap-1.5">
-                <input type="number" value={round.durationMin} onChange={(e) => onUpdate({ durationMin: +e.target.value })} className="hnx-input w-16 h-8" />
-                <span className="text-[11px] text-muted-foreground">min</span>
-              </div>
+        <div className="px-4 pb-4 pt-3 border-t border-border/50 bg-muted/20 animate-fade-in-fast">
+          <label className="hnx-label block mb-2">Skills to be assessed</label>
+          <div className="rounded-lg border border-border bg-card p-3">
+            <div className="flex flex-wrap gap-2">
+              {skills.map(skill => {
+                const active = selectedSkills.includes(skill);
+                return (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleSkill(skill)}
+                    className={cn(
+                      'rounded-md border px-2.5 py-1.5 text-[12px] font-semibold transition-all',
+                      active
+                        ? 'border-teal bg-teal-light text-teal-deep'
+                        : 'border-border bg-background text-muted-foreground hover:border-teal/50 hover:text-foreground'
+                    )}
+                  >
+                    {skill}
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <label className="hnx-label block mb-1">Pass %</label>
-              <input type="number" value={round.passThreshold || 60} onChange={(e) => onUpdate({ passThreshold: +e.target.value })} className="hnx-input w-16 h-8" />
-            </div>
-          </div>
-          <div className="flex items-end gap-4">
-            <label className="flex items-center gap-1.5 text-[12px] cursor-pointer">
-              <input type="checkbox" checked={round.mandatory} onChange={(e) => onUpdate({ mandatory: e.target.checked })} className="accent-primary" />
-              Mandatory
-            </label>
-            <label className="flex items-center gap-1.5 text-[12px] cursor-pointer">
-              <input type="checkbox" checked={round.autoTrigger} onChange={(e) => onUpdate({ autoTrigger: e.target.checked })} className="accent-primary" />
-              Auto-trigger
-            </label>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ============== Candidate Journey Preview ==============
-
-function CandidateJourneyPreview({ job, onClose }: { job: ReturnType<typeof useStore.getState>['jobs'][0]; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 bg-navy/60 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in-fast" onClick={onClose}>
-      <div className="bg-card rounded-xl shadow-premium max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="p-5 border-b flex items-center justify-between">
-          <div>
-            <h3 className="text-[16px] font-bold text-navy">Candidate Journey Preview</h3>
-            <p className="text-[12px] text-muted-foreground mt-0.5">What candidates see when applying to {job.title}</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-muted flex items-center justify-center">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-muted/30">
-          {job.rounds.map((round, i) => {
-            const meta = ROUND_META[round.type];
-            return (
-              <div key={round.id} className="hnx-card p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-navy text-navy-foreground text-[12px] font-bold flex items-center justify-center">{i + 1}</div>
-                  <RoundTypeIcon type={round.type} size="sm" />
-                  <div className="flex-1">
-                    <p className="text-[14px] font-bold text-navy">{round.label}</p>
-                    <p className="text-[11px] text-muted-foreground">{round.durationMin} min · {round.autoTrigger ? 'Starts automatically' : 'Triggered by recruiter'}</p>
-                  </div>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wider">Step {i + 1}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }
