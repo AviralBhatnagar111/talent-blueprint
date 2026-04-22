@@ -6,8 +6,8 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Pencil, Check, X,
-  RefreshCw, Lock, Unlock, Trash2, Search, Filter, AlertTriangle, Shield,
-  CheckCircle2, Clock, Eye, Minus, Plus, Zap,
+  Upload, FilePlus2, AlertTriangle, Shield, CheckCircle2, Eye,
+  Minus, Plus, Zap, ListChecks,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
@@ -40,13 +40,14 @@ export default function MCQBuilder() {
 
   const [step, setStep] = useState(1);
   const [context, setContext] = useState(job?.roleContext);
-  const [editField, setEditField] = useState<string | null>(null);
   const [blueprint, setBlueprint] = useState<MCQBlueprint>(defaultMCQBlueprint);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<MCQQuestion[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unapproved' | 'flagged'>('all');
-  const [searchQ, setSearchQ] = useState('');
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [showFinalQuestions, setShowFinalQuestions] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [assessmentName, setAssessmentName] = useState('Technical MCQ — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
 
@@ -64,16 +65,8 @@ export default function MCQBuilder() {
   };
 
   const approved = questions.filter(q => q.status === 'approved').length;
-  const flagged = questions.filter(q => q.status === 'flagged').length;
   const pending = questions.filter(q => q.status === 'pending').length;
   const allApproved = questions.length > 0 && approved === questions.length;
-
-  const filtered = questions.filter(q => {
-    if (filter === 'unapproved' && q.status === 'approved') return false;
-    if (filter === 'flagged' && q.status !== 'flagged') return false;
-    if (searchQ && !q.text.toLowerCase().includes(searchQ.toLowerCase())) return false;
-    return true;
-  });
 
   const updateQuestion = (id: string, patch: Partial<MCQQuestion>) =>
     setQuestions(qs => qs.map(q => q.id === id ? { ...q, ...patch } : q));
@@ -90,7 +83,20 @@ export default function MCQBuilder() {
       status: 'ready',
     });
     toast.success('MCQ Assessment saved & attached', { description: `${blueprint.questionsToSend} questions attached to ${round.label}` });
-    navigate(`/jobs/${job.id}/template`);
+    navigate(`/jobs/${job.id}`);
+  };
+
+  const addManualQuestion = (question: MCQQuestion) => {
+    setQuestions(qs => [question, ...qs]);
+    setStep(2);
+    toast.success('Question added to pool');
+  };
+
+  const importQuestions = (items: MCQQuestion[]) => {
+    setQuestions(qs => [...items, ...qs]);
+    setStep(2);
+    setShowBulkImport(false);
+    toast.success('Questions imported', { description: `${items.length} questions added to the pool` });
   };
 
   const difficulty = {
@@ -119,7 +125,7 @@ export default function MCQBuilder() {
             <Button
               size="sm"
               className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold h-8"
-              onClick={save}
+              onClick={() => setShowSaveConfirm(true)}
               disabled={step !== 3 || !allApproved}
             >
               Save & Attach to Round
@@ -187,9 +193,12 @@ export default function MCQBuilder() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="hnx-label">Difficulty Mix</span>
-                      <span className="text-[11px] text-muted-foreground">Balanced</span>
+                      <span className="text-[11px] text-muted-foreground">Editable AI target</span>
                     </div>
-                    <DifficultyBar easy={blueprint.difficultyMix.easy} medium={blueprint.difficultyMix.medium} hard={blueprint.difficultyMix.hard} />
+                    <DifficultyMixEditor
+                      value={blueprint.difficultyMix}
+                      onChange={(difficultyMix) => setBlueprint({ ...blueprint, difficultyMix })}
+                    />
                   </div>
                   <div>
                     <span className="hnx-label block mb-1.5">Competencies Covered</span>
@@ -242,35 +251,27 @@ export default function MCQBuilder() {
           {/* Step 2 — Review workspace */}
           {step === 2 && !generating && questions.length > 0 && (
             <div className="space-y-4 animate-fade-in">
-              <div className="hnx-card p-3 flex items-center gap-2 flex-wrap">
-                <div className="relative flex-1 min-w-[200px] max-w-sm">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    placeholder="Search questions…"
-                    value={searchQ}
-                    onChange={(e) => setSearchQ(e.target.value)}
-                    className="h-8 w-full rounded-md border border-input bg-muted/30 pl-8 pr-3 text-[13px] focus:outline-none focus:border-primary"
-                  />
+              <div className="hnx-card p-4 flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-3 mr-auto">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <ListChecks className="w-4 h-4" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h2 className="text-[15px] font-bold text-navy">Question Pool</h2>
+                    <p className="text-[12px] text-muted-foreground">Pool target {blueprint.poolSize}; select {blueprint.questionsToSend} final questions for the test.</p>
+                  </div>
                 </div>
-                {(['all', 'unapproved', 'flagged'] as const).map(f => (
-                  <button key={f} onClick={() => setFilter(f)} className={cn(
-                    'px-2.5 h-8 rounded-md text-[12px] font-medium transition-colors',
-                    filter === f ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
-                  )}>
-                    {f === 'all' ? 'All' : f === 'unapproved' ? 'Unapproved' : `Flagged (${flagged})`}
-                  </button>
-                ))}
-                <div className="ml-auto flex items-center gap-1.5">
-                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setQuestions(qs => qs.map(q => ({ ...q, status: 'approved' })))}>
-                    <Check className="w-3.5 h-3.5 mr-1" />Approve All
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setShowBulkImport(true)}>
+                    <Upload className="w-3.5 h-3.5 mr-1" />Bulk Import
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => toast('Pool regenerated')}>
-                    <RefreshCw className="w-3.5 h-3.5 mr-1" />Swap Pool
+                  <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
+                    <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Question Manually
                   </Button>
                 </div>
               </div>
 
-              {filtered.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />)}
+              {questions.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />)}
 
               <div className="flex justify-between items-center pt-2">
                 <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
@@ -296,7 +297,7 @@ export default function MCQBuilder() {
                   <div className="bg-card rounded-lg p-4 border mb-4">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Question 1 of {blueprint.questionsToSend}</span>
-                      <span className="text-[12px] font-mono text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />29:45</span>
+                      <span className="text-[12px] font-mono text-muted-foreground">29:45</span>
                     </div>
                     <p className="text-[14px] text-navy font-semibold mb-3">{questions[0]?.text}</p>
                     <div className="space-y-2">
@@ -339,7 +340,10 @@ export default function MCQBuilder() {
                 </div>
                 <div className="mt-5 pt-4 border-t flex flex-col gap-2">
                   <Button variant="outline" className="w-full" onClick={() => setStep(2)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back to Questions</Button>
-                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={save}>
+                  <Button variant="outline" className="w-full" onClick={() => setShowFinalQuestions(true)}>
+                    <Eye className="w-4 h-4 mr-1.5" />View Final Questions
+                  </Button>
+                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={() => setShowSaveConfirm(true)}>
                     <CheckCircle2 className="w-4 h-4 mr-1.5" />Save & Attach
                   </Button>
                 </div>
@@ -349,7 +353,10 @@ export default function MCQBuilder() {
 
           {/* Step 1 footer */}
           {step === 1 && (
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-between items-center pt-2">
+              <Button size="lg" variant="outline" className="font-semibold" onClick={() => setShowBulkImport(true)}>
+                <Upload className="w-4 h-4 mr-2" />Upload Questions
+              </Button>
               <Button size="lg" className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold shadow-green-glow" onClick={handleGenerate}>
                 <Sparkles className="w-4 h-4 mr-2" />Generate Questions
               </Button>
@@ -377,7 +384,7 @@ export default function MCQBuilder() {
                   <Stat label="Pool" value={`${blueprint.poolSize}`} />
                   <Stat label="Selected" value={`${questions.length}`} />
                   <Stat label="Approved" value={`${approved}/${questions.length}`} tone="green" />
-                  <Stat label="Flagged" value={`${flagged}`} tone={flagged > 0 ? 'warn' : 'default'} />
+                  <Stat label="Pending" value={`${pending}`} tone={pending > 0 ? 'warn' : 'default'} />
                 </div>
               </PanelSection>
 
@@ -389,7 +396,7 @@ export default function MCQBuilder() {
                 <ChecklistItem tone="ok">Anti-repeat: Active</ChecklistItem>
                 <ChecklistItem tone="ok">Freshness: High</ChecklistItem>
                 <ChecklistItem tone="ok">Role alignment: Strict</ChecklistItem>
-                {flagged > 0 && <ChecklistItem icon={AlertTriangle} tone="warn">{flagged} question{flagged > 1 ? 's' : ''} flagged for review</ChecklistItem>}
+                {pending > 0 && <ChecklistItem icon={AlertTriangle} tone="warn">{pending} question{pending > 1 ? 's' : ''} still unchecked</ChecklistItem>}
               </PanelSection>
             </>
           ) : (
@@ -406,6 +413,11 @@ export default function MCQBuilder() {
           )}
         </IntelligencePanel>
       </div>
+
+      {showManualAdd && <ManualQuestionModal onClose={() => setShowManualAdd(false)} onAdd={addManualQuestion} competencyName={job.competencies[0]?.name || 'Role Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} />}
+      {showBulkImport && <BulkImportModal onClose={() => setShowBulkImport(false)} onImport={importQuestions} competencyName={job.competencies[0]?.name || 'Role Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} />}
+      {showFinalQuestions && <FinalQuestionsOverlay questions={questions} onClose={() => setShowFinalQuestions(false)} />}
+      {showSaveConfirm && <SaveConfirmOverlay onClose={() => setShowSaveConfirm(false)} onConfirm={save} />}
     </AppLayout>
   );
 }
@@ -469,79 +481,101 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
+function DifficultyMixEditor({ value, onChange }: { value: { easy: number; medium: number; hard: number }; onChange: (v: { easy: number; medium: number; hard: number }) => void }) {
+  const setPart = (key: 'easy' | 'medium' | 'hard', next: number) => onChange({ ...value, [key]: Math.max(0, Math.min(100, next)) });
+  return (
+    <div className="space-y-3">
+      <DifficultyBar easy={value.easy} medium={value.medium} hard={value.hard} />
+      {(['easy', 'medium', 'hard'] as const).map((key) => (
+        <div key={key} className="flex items-center gap-3">
+          <span className="w-14 text-[11px] font-semibold text-muted-foreground capitalize">{key}</span>
+          <input type="range" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="flex-1 accent-primary" />
+          <input type="number" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="hnx-input h-8 w-16 text-center" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function QuestionCard({ question, index, onUpdate }: { question: MCQQuestion; index: number; onUpdate: (p: Partial<MCQQuestion>) => void }) {
   const [showExp, setShowExp] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const diffBar = question.difficulty === 'Easy' ? 'bg-hnxgreen-deep' : question.difficulty === 'Medium' ? 'bg-warning' : 'bg-destructive/80';
   const diffTone = question.difficulty === 'Easy' ? 'bg-green-light text-hnxgreen-deep' : question.difficulty === 'Medium' ? 'bg-warning-light text-warning' : 'bg-danger-light text-destructive';
   const isApproved = question.status === 'approved';
-  const isLocked = question.status === 'locked';
-  const isFlagged = question.status === 'flagged';
 
   return (
     <div className={cn(
       'hnx-card relative overflow-hidden group transition-all',
       isApproved && 'bg-teal-light/30 border-teal/30',
-      isFlagged && 'border-warning/40',
     )}>
       <span className={cn('absolute left-0 top-0 bottom-0 w-1', diffBar)} />
       <div className="p-4 pl-5">
         <div className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 accent-primary" />
+          <input type="checkbox" checked={isApproved} onChange={(e) => onUpdate({ status: e.target.checked ? 'approved' : 'pending' })} className="mt-1 accent-primary" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[11px] font-mono font-bold text-muted-foreground">Q{index + 1}</span>
               <span className={cn('hnx-badge', diffTone)}>{question.difficulty}</span>
               <SkillChip label={question.competencyName} variant="teal" size="xs" />
               <SkillChip label={question.type === 'TrueFalse' ? 'True/False' : question.type} variant="muted" size="xs" />
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{question.estimatedTimeSec}s</span>
-              {isFlagged && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-warning">
-                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />Review suggested
-                </span>
-              )}
             </div>
             <p className="text-[14px] font-semibold text-navy leading-snug mb-3">{question.text}</p>
-            <div className="space-y-1.5 mb-2">
-              {question.options.map((o, i) => (
-                <div key={o.id} className={cn(
-                  'flex items-center gap-2.5 p-2 rounded-md border text-[12.5px]',
-                  o.isCorrect ? 'bg-green-light/60 border-hnxgreen/30 text-hnxgreen-deep font-medium' : 'bg-card border-border text-foreground/80'
-                )}>
-                  <span className={cn(
-                    'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
-                    o.isCorrect ? 'bg-hnxgreen text-navy' : 'bg-muted text-muted-foreground'
-                  )}>
-                    {o.isCorrect ? <Check className="w-3 h-3" strokeWidth={3} /> : String.fromCharCode(65 + i)}
-                  </span>
-                  {o.text}
-                </div>
-              ))}
-            </div>
+            <button onClick={() => setShowOptions(!showOptions)} className="inline-flex items-center gap-1 text-[11px] text-primary font-semibold hover:underline mr-4">
+              <ChevronDown className={cn('w-3 h-3 transition-transform', showOptions && 'rotate-180')} />{showOptions ? 'Hide' : 'View'} options
+            </button>
             <button onClick={() => setShowExp(!showExp)} className="text-[11px] text-primary font-semibold hover:underline">
               {showExp ? 'Hide' : 'View'} explanation
             </button>
+            {showOptions && <div className="space-y-1.5 mt-3 mb-2 animate-fade-in-fast">{question.options.map((o, i) => <div key={o.id} className={cn('flex items-center gap-2.5 p-2 rounded-md border text-[12.5px]', o.isCorrect ? 'bg-green-light/60 border-hnxgreen/30 text-hnxgreen-deep font-medium' : 'bg-card border-border text-foreground/80')}><span className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0', o.isCorrect ? 'bg-hnxgreen text-navy' : 'bg-muted text-muted-foreground')}>{o.isCorrect ? <Check className="w-3 h-3" strokeWidth={3} /> : String.fromCharCode(65 + i)}</span>{o.text}</div>)}</div>}
             {showExp && (
               <p className="mt-2 p-2.5 rounded-md bg-muted/40 text-[12px] text-foreground/80 leading-relaxed animate-fade-in-fast">{question.explanation}</p>
             )}
-          </div>
-          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => onUpdate({ status: isApproved ? 'pending' : 'approved' })} className={cn('w-8 h-8 rounded-md flex items-center justify-center', isApproved ? 'bg-hnxgreen text-navy' : 'hover:bg-hnxgreen/20 text-muted-foreground')} aria-label="Approve">
-              <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-            </button>
-            <button onClick={() => onUpdate({ status: 'pending' })} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Regenerate">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => onUpdate({ status: isLocked ? 'approved' : 'locked' })} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Lock">
-              {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-            </button>
-            <button onClick={() => onUpdate({ status: 'removed' })} className="w-8 h-8 rounded-md hover:bg-destructive/10 hover:text-destructive text-muted-foreground flex items-center justify-center" aria-label="Remove">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function ManualQuestionModal({ onClose, onAdd, competencyName, skillTag }: { onClose: () => void; onAdd: (q: MCQQuestion) => void; competencyName: string; skillTag: string }) {
+  const [text, setText] = useState('');
+  const [options, setOptions] = useState(['', '', '', '']);
+  const [answer, setAnswer] = useState(0);
+  const [explanation, setExplanation] = useState('');
+  const [difficulty, setDifficulty] = useState<MCQQuestion['difficulty']>('Medium');
+  const submit = () => {
+    if (!text.trim() || options.some(o => !o.trim())) return toast.error('Add the question and all four options');
+    onAdd({ id: `manual-${Date.now()}`, text, options: options.map((o, i) => ({ id: String.fromCharCode(97 + i), text: o, isCorrect: i === answer })), explanation: explanation || 'Manual explanation pending recruiter review.', competencyId: 'manual', competencyName, skillTag, difficulty, type: 'MCQ', estimatedTimeSec: 60, status: 'pending', freshness: 'new' });
+    onClose();
+  };
+  return <ModalShell title="Add Question Manually" onClose={onClose}><div className="space-y-3"><textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Question" className="hnx-input min-h-20 w-full" />{options.map((o, i) => <div key={i} className="flex gap-2"><input type="radio" checked={answer === i} onChange={() => setAnswer(i)} className="accent-primary" /><input value={o} onChange={(e) => setOptions(options.map((x, ix) => ix === i ? e.target.value : x))} placeholder={`Option ${i + 1}`} className="hnx-input flex-1" /></div>)}<div className="grid grid-cols-2 gap-3"><select value={difficulty} onChange={(e) => setDifficulty(e.target.value as MCQQuestion['difficulty'])} className="hnx-input"><option>Easy</option><option>Medium</option><option>Hard</option></select><input value={explanation} onChange={(e) => setExplanation(e.target.value)} placeholder="Explanation" className="hnx-input" /></div><Button className="w-full bg-primary" onClick={submit}>Add to Pool</Button></div></ModalShell>;
+}
+
+function BulkImportModal({ onClose, onImport, competencyName, skillTag }: { onClose: () => void; onImport: (q: MCQQuestion[]) => void; competencyName: string; skillTag: string }) {
+  const [bulk, setBulk] = useState('What is React used for?\nA. Styling only\nB. Building user interfaces*\nC. Database hosting\nD. Server monitoring\nExplanation: React is a UI library.');
+  const submit = () => {
+    const blocks = bulk.split(/\n\s*\n/).filter(Boolean);
+    const imported = blocks.map((block, idx) => {
+      const lines = block.split('\n').filter(Boolean);
+      const opts = lines.slice(1, 5).map((line, i) => ({ id: String.fromCharCode(97 + i), text: line.replace(/^[A-D]\.?\s*/i, '').replace('*', ''), isCorrect: line.includes('*') || i === 0 }));
+      return { id: `import-${Date.now()}-${idx}`, text: lines[0], options: opts, explanation: lines.find(l => l.toLowerCase().startsWith('explanation'))?.replace(/explanation:\s*/i, '') || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: 'Medium' as const, type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
+    });
+    onImport(imported);
+  };
+  return <ModalShell title="Bulk Import Questions" onClose={onClose}><div className="space-y-3"><p className="text-[12px] text-muted-foreground">Paste blocks with one question, four options, mark correct option with *, and optional explanation.</p><textarea value={bulk} onChange={(e) => setBulk(e.target.value)} className="hnx-input min-h-64 w-full font-mono text-[12px]" /><Button className="w-full bg-primary" onClick={submit}><Upload className="w-4 h-4 mr-2" />Import Questions</Button></div></ModalShell>;
+}
+
+function FinalQuestionsOverlay({ questions, onClose }: { questions: MCQQuestion[]; onClose: () => void }) {
+  return <ModalShell title="Final Questions" onClose={onClose} wide><div className="space-y-3 max-h-[70vh] overflow-auto pr-2">{questions.filter(q => q.status === 'approved').map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={() => undefined} />)}</div></ModalShell>;
+}
+
+function SaveConfirmOverlay({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  return <ModalShell title="Save Assessment" onClose={onClose}><div className="space-y-4"><div className="p-4 rounded-lg bg-danger-light border border-destructive/20"><p className="text-[13px] font-semibold text-navy">This action cannot be reverted.</p><p className="text-[12px] text-muted-foreground mt-1">Saving attaches the final MCQ test to this round for operational use.</p></div><div className="flex gap-2 justify-end"><Button variant="outline" onClick={onClose}>Cancel</Button><Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={onConfirm}>Confirm & Save</Button></div></div></ModalShell>;
+}
+
+function ModalShell({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+  return <div className="fixed inset-0 z-[80] bg-navy/40 backdrop-blur-sm flex items-center justify-center p-6"><div className={cn('hnx-card p-5 shadow-2xl animate-fade-in max-h-[88vh] overflow-hidden', wide ? 'w-full max-w-5xl' : 'w-full max-w-xl')}><div className="flex items-center justify-between mb-4"><h3 className="text-[16px] font-bold text-navy">{title}</h3><button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-muted flex items-center justify-center"><X className="w-4 h-4" /></button></div>{children}</div></div>;
 }
 
 function Stat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'green' | 'warn' }) {
