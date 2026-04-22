@@ -40,7 +40,6 @@ export default function MCQBuilder() {
 
   const [step, setStep] = useState(1);
   const [context, setContext] = useState(job?.roleContext);
-  const [editField, setEditField] = useState<string | null>(null);
   const [blueprint, setBlueprint] = useState<MCQBlueprint>(defaultMCQBlueprint);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -252,35 +251,27 @@ export default function MCQBuilder() {
           {/* Step 2 — Review workspace */}
           {step === 2 && !generating && questions.length > 0 && (
             <div className="space-y-4 animate-fade-in">
-              <div className="hnx-card p-3 flex items-center gap-2 flex-wrap">
-                <div className="relative flex-1 min-w-[200px] max-w-sm">
-                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    placeholder="Search questions…"
-                    value={searchQ}
-                    onChange={(e) => setSearchQ(e.target.value)}
-                    className="h-8 w-full rounded-md border border-input bg-muted/30 pl-8 pr-3 text-[13px] focus:outline-none focus:border-primary"
-                  />
+              <div className="hnx-card p-4 flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-3 mr-auto">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                    <ListChecks className="w-4 h-4" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h2 className="text-[15px] font-bold text-navy">Question Pool</h2>
+                    <p className="text-[12px] text-muted-foreground">Pool target {blueprint.poolSize}; select {blueprint.questionsToSend} final questions for the test.</p>
+                  </div>
                 </div>
-                {(['all', 'unapproved', 'flagged'] as const).map(f => (
-                  <button key={f} onClick={() => setFilter(f)} className={cn(
-                    'px-2.5 h-8 rounded-md text-[12px] font-medium transition-colors',
-                    filter === f ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'
-                  )}>
-                    {f === 'all' ? 'All' : f === 'unapproved' ? 'Unapproved' : `Flagged (${flagged})`}
-                  </button>
-                ))}
-                <div className="ml-auto flex items-center gap-1.5">
-                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setQuestions(qs => qs.map(q => ({ ...q, status: 'approved' })))}>
-                    <Check className="w-3.5 h-3.5 mr-1" />Approve All
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setShowBulkImport(true)}>
+                    <Upload className="w-3.5 h-3.5 mr-1" />Bulk Import
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => toast('Pool regenerated')}>
-                    <RefreshCw className="w-3.5 h-3.5 mr-1" />Swap Pool
+                  <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
+                    <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Question Manually
                   </Button>
                 </div>
               </div>
 
-              {filtered.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />)}
+              {questions.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />)}
 
               <div className="flex justify-between items-center pt-2">
                 <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
