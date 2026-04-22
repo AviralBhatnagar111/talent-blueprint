@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Check, X, RefreshCw, Lock,
   Unlock, Trash2, AlertTriangle, Shield, CheckCircle2, Clock, Minus, Plus, Zap,
-  Code2, Terminal, FileCode, Play, Pencil,
+  Code2, Terminal, FileCode, Play, Pencil, Eye, FilePlus2,
 } from 'lucide-react';
 import { ContextTopBar } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
@@ -25,7 +25,7 @@ import type { CodingBlueprint, CodingLanguage, CodingProblem, CodingProblemType 
 
 const STEPS = [
   { number: 1, label: 'Confirm Context' },
-  { number: 2, label: 'Generate Problems' },
+  { number: 2, label: 'Problem Pool' },
   { number: 3, label: 'Review & Finalize' },
 ];
 
@@ -49,6 +49,9 @@ export default function CodingBuilder() {
   const [assessmentName, setAssessmentName] = useState('Coding Assessment — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [showFinalProblems, setShowFinalProblems] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
   if (!job || !round || !context) {
     return <AppLayout bare><div className="p-8">Not found. <Link to="/jobs" className="text-primary">Back to Jobs</Link></div></AppLayout>;
@@ -77,7 +80,13 @@ export default function CodingBuilder() {
       status: 'ready',
     });
     toast.success('Coding Assessment saved & attached', { description: `${blueprint.problemsToSend} problems attached to ${round.label}` });
-    navigate(`/jobs/${job.id}/template`);
+    navigate(`/jobs/${job.id}`);
+  };
+
+  const addManualProblem = (problem: CodingProblem) => {
+    setProblems(ps => [problem, ...ps]);
+    setStep(2);
+    toast.success('Problem added to pool');
   };
 
   const toggleLanguage = (l: CodingLanguage) =>
@@ -169,8 +178,11 @@ export default function CodingBuilder() {
                   <NumberStepper label="Problems to send" value={blueprint.problemsToSend} step={1} onChange={(v) => setBlueprint({ ...blueprint, problemsToSend: v })} suffix="problems" />
                   <NumberStepper label="Duration" value={blueprint.durationMin} step={15} onChange={(v) => setBlueprint({ ...blueprint, durationMin: v })} suffix="minutes" />
                   <div>
-                    <span className="hnx-label block mb-2">Difficulty Mix</span>
-                    <DifficultyBar easy={blueprint.difficultyMix.easy} medium={blueprint.difficultyMix.medium} hard={blueprint.difficultyMix.hard} />
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="hnx-label">Difficulty Mix</span>
+                      <span className="text-[11px] text-muted-foreground">Editable AI target</span>
+                    </div>
+                    <DifficultyMixEditor value={blueprint.difficultyMix} onChange={(difficultyMix) => setBlueprint({ ...blueprint, difficultyMix })} />
                   </div>
                   <div>
                     <span className="hnx-label block mb-1.5">Problem Types</span>
@@ -237,11 +249,19 @@ export default function CodingBuilder() {
           {/* STEP 2 */}
           {step === 2 && !generating && problems.length > 0 && (
             <div className="space-y-3 animate-fade-in">
-              <div className="hnx-card p-3 flex items-center gap-2">
-                <span className="text-[12px] font-semibold text-navy">{problems.length} problems generated</span>
-                <span className="text-[11px] text-muted-foreground">· {approved}/{problems.length} approved</span>
-                <Button size="sm" variant="outline" className="h-8 text-[12px] ml-auto" onClick={() => setProblems(ps => ps.map(p => ({ ...p, status: 'approved' })))}>
+              <div className="hnx-card p-4 flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-3 mr-auto">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Code2 className="w-4 h-4" strokeWidth={2.5} /></div>
+                  <div>
+                    <h2 className="text-[15px] font-bold text-navy">Problem Pool</h2>
+                    <p className="text-[12px] text-muted-foreground">Pool target {blueprint.poolSize}; approve {blueprint.problemsToSend} final coding problems.</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setProblems(ps => ps.map(p => ({ ...p, status: 'approved' })))}>
                   <Check className="w-3.5 h-3.5 mr-1" />Approve All
+                </Button>
+                <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
+                  <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Problem Manually
                 </Button>
               </div>
 
@@ -258,7 +278,7 @@ export default function CodingBuilder() {
 
               <div className="flex justify-between items-center pt-2">
                 <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
-                <Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold" onClick={() => setStep(3)} disabled={!allApproved}>
+                  <Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold" onClick={() => setStep(3)} disabled={!allApproved}>
                   Continue to Finalize<ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Button>
               </div>
@@ -342,7 +362,10 @@ module.exports = solution;`}
                 </div>
                 <div className="mt-5 pt-4 border-t flex flex-col gap-2">
                   <Button variant="outline" className="w-full" onClick={() => setStep(2)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
-                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={save}>
+                  <Button variant="outline" className="w-full" onClick={() => setShowFinalProblems(true)}>
+                    <Eye className="w-4 h-4 mr-1.5" />View Final Problems
+                  </Button>
+                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={() => setShowSaveConfirm(true)}>
                     <CheckCircle2 className="w-4 h-4 mr-1.5" />Save & Attach
                   </Button>
                 </div>
@@ -403,6 +426,10 @@ module.exports = solution;`}
           )}
         </IntelligencePanel>
       </div>
+
+      {showManualAdd && <ManualCodingModal onClose={() => setShowManualAdd(false)} onAdd={addManualProblem} competencyName={job.competencies[0]?.name || 'Technical Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} languages={blueprint.languages} />}
+      {showFinalProblems && <FinalProblemsOverlay problems={problems} onClose={() => setShowFinalProblems(false)} />}
+      {showSaveConfirm && <SaveConfirmOverlay onClose={() => setShowSaveConfirm(false)} onConfirm={save} />}
     </AppLayout>
   );
 }
@@ -441,6 +468,22 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
+function DifficultyMixEditor({ value, onChange }: { value: { easy: number; medium: number; hard: number }; onChange: (v: { easy: number; medium: number; hard: number }) => void }) {
+  const setPart = (key: 'easy' | 'medium' | 'hard', next: number) => onChange({ ...value, [key]: Math.max(0, Math.min(100, next)) });
+  return (
+    <div className="space-y-3">
+      <DifficultyBar easy={value.easy} medium={value.medium} hard={value.hard} />
+      {(['easy', 'medium', 'hard'] as const).map((key) => (
+        <div key={key} className="flex items-center gap-3">
+          <span className="w-14 text-[11px] font-semibold text-muted-foreground capitalize">{key}</span>
+          <input type="range" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="flex-1 accent-primary" />
+          <input type="number" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="hnx-input h-8 w-16 text-center" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CodingCard({ problem, index, expanded, onToggleExpand, onUpdate }: {
   problem: CodingProblem; index: number; expanded: boolean; onToggleExpand: () => void; onUpdate: (p: Partial<CodingProblem>) => void;
 }) {
@@ -453,14 +496,13 @@ function CodingCard({ problem, index, expanded, onToggleExpand, onUpdate }: {
       <span className={cn('absolute left-0 top-0 bottom-0 w-1', diffBar)} />
       <div className="p-4 pl-5">
         <div className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 accent-primary" />
+          <input type="checkbox" checked={isApproved} onChange={(e) => onUpdate({ status: e.target.checked ? 'approved' : 'pending' })} className="mt-1 accent-primary" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="text-[11px] font-mono font-bold text-muted-foreground">P{index + 1}</span>
               <span className={cn('hnx-badge', diffTone)}>{problem.difficulty}</span>
               <SkillChip label={problem.competencyName} variant="teal" size="xs" />
               <SkillChip label={problem.problemType} variant="muted" size="xs" />
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{problem.estimatedSolveTimeMin} min</span>
               <span className="text-[10px] text-muted-foreground">· {problem.scoring.maxPoints} pts</span>
               {problem.highRoleFit && <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-deep"><Sparkles className="w-3 h-3" strokeWidth={2.5} />High role-fit</span>}
               {problem.freshness === 'new' && <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-hnxgreen-deep">Fresh</span>}
@@ -509,23 +551,6 @@ function CodingCard({ problem, index, expanded, onToggleExpand, onUpdate }: {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            <button onClick={() => onUpdate({ status: isApproved ? 'pending' : 'approved' })} className={cn('w-8 h-8 rounded-md flex items-center justify-center', isApproved ? 'bg-hnxgreen text-navy' : 'hover:bg-hnxgreen/20 text-muted-foreground')} aria-label="Approve">
-              <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-            </button>
-            <button onClick={() => toast('Regenerating…')} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Regenerate">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-            <button className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Edit">
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => onUpdate({ status: 'locked' })} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Lock">
-              <Lock className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => onUpdate({ status: 'removed' })} className="w-8 h-8 rounded-md hover:bg-destructive/10 hover:text-destructive text-muted-foreground flex items-center justify-center" aria-label="Remove">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -539,6 +564,31 @@ function DetailBlock({ title, children }: { title: string; children: React.React
       {children}
     </div>
   );
+}
+
+function ManualCodingModal({ onClose, onAdd, competencyName, skillTag, languages }: { onClose: () => void; onAdd: (p: CodingProblem) => void; competencyName: string; skillTag: string; languages: CodingLanguage[] }) {
+  const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
+  const [statement, setStatement] = useState('');
+  const [difficulty, setDifficulty] = useState<CodingProblem['difficulty']>('Medium');
+  const submit = () => {
+    if (!title.trim() || !statement.trim()) return toast.error('Add problem title and statement');
+    onAdd({ id: `manual-coding-${Date.now()}`, title, summary: summary || title, fullStatement: statement, ioFormat: { input: 'Standard input', output: 'Expected output' }, constraints: ['Input size follows role-appropriate limits'], sampleCases: [{ input: 'sample input', output: 'sample output', explanation: 'Validates the core behavior.' }], hiddenCaseCount: 8, expectedComplexity: { time: 'O(n)', space: 'O(1)' }, scoring: { maxPoints: 100, perTestCase: 10 }, competencyId: 'manual', competencyName, skillTag, difficulty, problemType: 'Implementation', languagesSupported: languages, estimatedSolveTimeMin: 45, rationale: 'Manually added by recruiter for this coding round.', status: 'pending', freshness: 'new', highRoleFit: true });
+    onClose();
+  };
+  return <ModalShell title="Add Coding Problem Manually" onClose={onClose}><div className="space-y-3"><input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Problem title" className="hnx-input w-full" /><input value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Short summary" className="hnx-input w-full" /><textarea value={statement} onChange={(e) => setStatement(e.target.value)} placeholder="Problem statement, input/output expectations, constraints" className="hnx-input min-h-40 w-full" /><select value={difficulty} onChange={(e) => setDifficulty(e.target.value as CodingProblem['difficulty'])} className="hnx-input w-full"><option>Easy</option><option>Medium</option><option>Hard</option></select><Button className="w-full bg-primary" onClick={submit}>Add to Pool</Button></div></ModalShell>;
+}
+
+function FinalProblemsOverlay({ problems, onClose }: { problems: CodingProblem[]; onClose: () => void }) {
+  return <ModalShell title="Final Coding Problems" onClose={onClose} wide><div className="space-y-3 max-h-[70vh] overflow-auto pr-2">{problems.filter(p => p.status === 'approved').map((p, i) => <CodingCard key={p.id} problem={p} index={i} expanded={false} onToggleExpand={() => undefined} onUpdate={() => undefined} />)}</div></ModalShell>;
+}
+
+function SaveConfirmOverlay({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  return <ModalShell title="Save Coding Assessment" onClose={onClose}><div className="space-y-4"><div className="p-4 rounded-lg bg-danger-light border border-destructive/20"><p className="text-[13px] font-semibold text-navy">This action cannot be reverted.</p><p className="text-[12px] text-muted-foreground mt-1">Saving attaches the final coding test to this round for operational use.</p></div><div className="flex gap-2 justify-end"><Button variant="outline" onClick={onClose}>Cancel</Button><Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={onConfirm}>Confirm & Save</Button></div></div></ModalShell>;
+}
+
+function ModalShell({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+  return <div className="fixed inset-0 z-[80] bg-navy/40 backdrop-blur-sm flex items-center justify-center p-6"><div className={cn('hnx-card p-5 shadow-2xl animate-fade-in max-h-[88vh] overflow-hidden', wide ? 'w-full max-w-5xl' : 'w-full max-w-xl')}><div className="flex items-center justify-between mb-4"><h3 className="text-[16px] font-bold text-navy">{title}</h3><button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-muted flex items-center justify-center"><X className="w-4 h-4" /></button></div>{children}</div></div>;
 }
 
 function Stat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'green' | 'warn' }) {

@@ -25,9 +25,11 @@ import type { MCQBlueprint, MCQQuestion, MCQType } from '@/types/hirenowx';
 
 const STEPS = [
   { number: 1, label: 'Confirm Context' },
-  { number: 2, label: 'Generate Questions' },
+  { number: 2, label: 'Question Pool' },
   { number: 3, label: 'Review & Finalize' },
 ];
+
+type PoolTab = 'ai' | 'upload' | 'all';
 
 export default function MCQBuilder() {
   const { jobId, roundId } = useParams<{ jobId: string; roundId: string }>();
@@ -48,6 +50,7 @@ export default function MCQBuilder() {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [showFinalQuestions, setShowFinalQuestions] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [poolTab, setPoolTab] = useState<PoolTab>('all');
   const [assessmentName, setAssessmentName] = useState('Technical MCQ — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
 
@@ -61,7 +64,8 @@ export default function MCQBuilder() {
   };
   const handleGenComplete = () => {
     setGenerating(false);
-    setQuestions(getSampleMCQ());
+    setQuestions(getSampleMCQ().map((q, i) => ({ ...q, id: `ai-${Date.now()}-${i}` })));
+    setPoolTab('ai');
   };
 
   const approved = questions.filter(q => q.status === 'approved').length;
@@ -89,15 +93,21 @@ export default function MCQBuilder() {
   const addManualQuestion = (question: MCQQuestion) => {
     setQuestions(qs => [question, ...qs]);
     setStep(2);
+    setPoolTab('upload');
     toast.success('Question added to pool');
   };
 
   const importQuestions = (items: MCQQuestion[]) => {
     setQuestions(qs => [...items, ...qs]);
     setStep(2);
+    setPoolTab('upload');
     setShowBulkImport(false);
     toast.success('Questions imported', { description: `${items.length} questions added to the pool` });
   };
+
+  const visibleQuestions = questions.filter(q => poolTab === 'all' || (poolTab === 'ai' ? q.id.startsWith('ai-') : !q.id.startsWith('ai-')));
+  const aiCount = questions.filter(q => q.id.startsWith('ai-')).length;
+  const uploadCount = questions.length - aiCount;
 
   const difficulty = {
     easy: questions.filter(q => q.difficulty === 'Easy').length,
@@ -251,7 +261,8 @@ export default function MCQBuilder() {
           {/* Step 2 — Review workspace */}
           {step === 2 && !generating && questions.length > 0 && (
             <div className="space-y-4 animate-fade-in">
-              <div className="hnx-card p-4 flex items-center gap-4 flex-wrap">
+              <div className="hnx-card p-4 space-y-4">
+                <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-3 mr-auto">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <ListChecks className="w-4 h-4" strokeWidth={2.5} />
@@ -262,16 +273,30 @@ export default function MCQBuilder() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setQuestions(qs => qs.map(q => ({ ...q, status: 'approved' })))}>
+                    <Check className="w-3.5 h-3.5 mr-1" />Approve All
+                  </Button>
                   <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setShowBulkImport(true)}>
-                    <Upload className="w-3.5 h-3.5 mr-1" />Bulk Import
+                    <Upload className="w-3.5 h-3.5 mr-1" />Bulk Upload
                   </Button>
                   <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
                     <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Question Manually
                   </Button>
                 </div>
+                </div>
+                <div className="flex items-center gap-2 border-t pt-3">
+                  <PoolTabButton active={poolTab === 'ai'} onClick={() => setPoolTab('ai')} label="AI Generated" count={aiCount} />
+                  <PoolTabButton active={poolTab === 'upload'} onClick={() => setPoolTab('upload')} label="Bulk Upload" count={uploadCount} />
+                  <PoolTabButton active={poolTab === 'all'} onClick={() => setPoolTab('all')} label="Total Pool" count={questions.length} />
+                </div>
               </div>
 
-              {questions.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />)}
+              {visibleQuestions.length > 0 ? visibleQuestions.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />) : (
+                <div className="hnx-card p-8 text-center">
+                  <p className="text-[14px] font-bold text-navy">No questions in this tab yet</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">Generate with AI or upload a CSV/text file to fill this pool.</p>
+                </div>
+              )}
 
               <div className="flex justify-between items-center pt-2">
                 <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
@@ -497,6 +522,20 @@ function DifficultyMixEditor({ value, onChange }: { value: { easy: number; mediu
   );
 }
 
+function PoolTabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'h-8 px-3 rounded-md text-[12px] font-semibold border transition-all inline-flex items-center gap-2',
+        active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30',
+      )}
+    >
+      {label}<span className={cn('text-[10px] rounded-full px-1.5 py-0.5', active ? 'bg-primary-foreground/20' : 'bg-muted')}>{count}</span>
+    </button>
+  );
+}
+
 function QuestionCard({ question, index, onUpdate }: { question: MCQQuestion; index: number; onUpdate: (p: Partial<MCQQuestion>) => void }) {
   const [showExp, setShowExp] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
@@ -554,16 +593,27 @@ function ManualQuestionModal({ onClose, onAdd, competencyName, skillTag }: { onC
 
 function BulkImportModal({ onClose, onImport, competencyName, skillTag }: { onClose: () => void; onImport: (q: MCQQuestion[]) => void; competencyName: string; skillTag: string }) {
   const [bulk, setBulk] = useState('What is React used for?\nA. Styling only\nB. Building user interfaces*\nC. Database hosting\nD. Server monitoring\nExplanation: React is a UI library.');
+  const parseCsv = (text: string) => text.split(/\r?\n/).slice(1).filter(Boolean).map((line, idx) => {
+    const cols = line.match(/("[^"]*"|[^,]+)/g)?.map(c => c.replace(/^"|"$/g, '').trim()) || [];
+    const correct = Math.max(0, ['A', 'B', 'C', 'D'].indexOf((cols[5] || 'A').toUpperCase()));
+    return { id: `upload-${Date.now()}-${idx}`, text: cols[0] || `Imported question ${idx + 1}`, options: [1, 2, 3, 4].map((n, i) => ({ id: String.fromCharCode(97 + i), text: cols[n] || `Option ${n}`, isCorrect: i === correct })), explanation: cols[6] || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: ((cols[7] as MCQQuestion['difficulty']) || 'Medium'), type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
+  });
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onImport(parseCsv(String(reader.result || '')));
+    reader.readAsText(file);
+  };
   const submit = () => {
     const blocks = bulk.split(/\n\s*\n/).filter(Boolean);
     const imported = blocks.map((block, idx) => {
       const lines = block.split('\n').filter(Boolean);
       const opts = lines.slice(1, 5).map((line, i) => ({ id: String.fromCharCode(97 + i), text: line.replace(/^[A-D]\.?\s*/i, '').replace('*', ''), isCorrect: line.includes('*') || i === 0 }));
-      return { id: `import-${Date.now()}-${idx}`, text: lines[0], options: opts, explanation: lines.find(l => l.toLowerCase().startsWith('explanation'))?.replace(/explanation:\s*/i, '') || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: 'Medium' as const, type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
+      return { id: `upload-${Date.now()}-${idx}`, text: lines[0], options: opts, explanation: lines.find(l => l.toLowerCase().startsWith('explanation'))?.replace(/explanation:\s*/i, '') || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: 'Medium' as const, type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
     });
     onImport(imported);
   };
-  return <ModalShell title="Bulk Import Questions" onClose={onClose}><div className="space-y-3"><p className="text-[12px] text-muted-foreground">Paste blocks with one question, four options, mark correct option with *, and optional explanation.</p><textarea value={bulk} onChange={(e) => setBulk(e.target.value)} className="hnx-input min-h-64 w-full font-mono text-[12px]" /><Button className="w-full bg-primary" onClick={submit}><Upload className="w-4 h-4 mr-2" />Import Questions</Button></div></ModalShell>;
+  return <ModalShell title="Bulk Upload Questions" onClose={onClose}><div className="space-y-3"><p className="text-[12px] text-muted-foreground">Upload CSV columns: question, option1, option2, option3, option4, correct(A-D), explanation, difficulty. You can also paste blocks below.</p><label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-5 text-[13px] font-semibold text-primary cursor-pointer"><Upload className="w-4 h-4" />Upload CSV file<input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} /></label><textarea value={bulk} onChange={(e) => setBulk(e.target.value)} className="hnx-input min-h-56 w-full font-mono text-[12px]" /><Button className="w-full bg-primary" onClick={submit}><Upload className="w-4 h-4 mr-2" />Import Pasted Questions</Button></div></ModalShell>;
 }
 
 function FinalQuestionsOverlay({ questions, onClose }: { questions: MCQQuestion[]; onClose: () => void }) {
