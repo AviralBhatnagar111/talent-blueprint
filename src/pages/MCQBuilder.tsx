@@ -194,9 +194,12 @@ export default function MCQBuilder() {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="hnx-label">Difficulty Mix</span>
-                      <span className="text-[11px] text-muted-foreground">Balanced</span>
+                      <span className="text-[11px] text-muted-foreground">Editable AI target</span>
                     </div>
-                    <DifficultyBar easy={blueprint.difficultyMix.easy} medium={blueprint.difficultyMix.medium} hard={blueprint.difficultyMix.hard} />
+                    <DifficultyMixEditor
+                      value={blueprint.difficultyMix}
+                      onChange={(difficultyMix) => setBlueprint({ ...blueprint, difficultyMix })}
+                    />
                   </div>
                   <div>
                     <span className="hnx-label block mb-1.5">Competencies Covered</span>
@@ -356,7 +359,10 @@ export default function MCQBuilder() {
 
           {/* Step 1 footer */}
           {step === 1 && (
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-between items-center pt-2">
+              <Button size="lg" variant="outline" className="font-semibold" onClick={() => setShowBulkImport(true)}>
+                <Upload className="w-4 h-4 mr-2" />Upload Questions
+              </Button>
               <Button size="lg" className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold shadow-green-glow" onClick={handleGenerate}>
                 <Sparkles className="w-4 h-4 mr-2" />Generate Questions
               </Button>
