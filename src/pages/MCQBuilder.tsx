@@ -538,6 +538,46 @@ function QuestionCard({ question, index, onUpdate }: { question: MCQQuestion; in
   );
 }
 
+function ManualQuestionModal({ onClose, onAdd, competencyName, skillTag }: { onClose: () => void; onAdd: (q: MCQQuestion) => void; competencyName: string; skillTag: string }) {
+  const [text, setText] = useState('');
+  const [options, setOptions] = useState(['', '', '', '']);
+  const [answer, setAnswer] = useState(0);
+  const [explanation, setExplanation] = useState('');
+  const [difficulty, setDifficulty] = useState<MCQQuestion['difficulty']>('Medium');
+  const submit = () => {
+    if (!text.trim() || options.some(o => !o.trim())) return toast.error('Add the question and all four options');
+    onAdd({ id: `manual-${Date.now()}`, text, options: options.map((o, i) => ({ id: String.fromCharCode(97 + i), text: o, isCorrect: i === answer })), explanation: explanation || 'Manual explanation pending recruiter review.', competencyId: 'manual', competencyName, skillTag, difficulty, type: 'MCQ', estimatedTimeSec: 60, status: 'pending', freshness: 'new' });
+    onClose();
+  };
+  return <ModalShell title="Add Question Manually" onClose={onClose}><div className="space-y-3"><textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Question" className="hnx-input min-h-20 w-full" />{options.map((o, i) => <div key={i} className="flex gap-2"><input type="radio" checked={answer === i} onChange={() => setAnswer(i)} className="accent-primary" /><input value={o} onChange={(e) => setOptions(options.map((x, ix) => ix === i ? e.target.value : x))} placeholder={`Option ${i + 1}`} className="hnx-input flex-1" /></div>)}<div className="grid grid-cols-2 gap-3"><select value={difficulty} onChange={(e) => setDifficulty(e.target.value as MCQQuestion['difficulty'])} className="hnx-input"><option>Easy</option><option>Medium</option><option>Hard</option></select><input value={explanation} onChange={(e) => setExplanation(e.target.value)} placeholder="Explanation" className="hnx-input" /></div><Button className="w-full bg-primary" onClick={submit}>Add to Pool</Button></div></ModalShell>;
+}
+
+function BulkImportModal({ onClose, onImport, competencyName, skillTag }: { onClose: () => void; onImport: (q: MCQQuestion[]) => void; competencyName: string; skillTag: string }) {
+  const [bulk, setBulk] = useState('What is React used for?\nA. Styling only\nB. Building user interfaces*\nC. Database hosting\nD. Server monitoring\nExplanation: React is a UI library.');
+  const submit = () => {
+    const blocks = bulk.split(/\n\s*\n/).filter(Boolean);
+    const imported = blocks.map((block, idx) => {
+      const lines = block.split('\n').filter(Boolean);
+      const opts = lines.slice(1, 5).map((line, i) => ({ id: String.fromCharCode(97 + i), text: line.replace(/^[A-D]\.?\s*/i, '').replace('*', ''), isCorrect: line.includes('*') || i === 0 }));
+      return { id: `import-${Date.now()}-${idx}`, text: lines[0], options: opts, explanation: lines.find(l => l.toLowerCase().startsWith('explanation'))?.replace(/explanation:\s*/i, '') || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: 'Medium' as const, type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
+    });
+    onImport(imported);
+  };
+  return <ModalShell title="Bulk Import Questions" onClose={onClose}><div className="space-y-3"><p className="text-[12px] text-muted-foreground">Paste blocks with one question, four options, mark correct option with *, and optional explanation.</p><textarea value={bulk} onChange={(e) => setBulk(e.target.value)} className="hnx-input min-h-64 w-full font-mono text-[12px]" /><Button className="w-full bg-primary" onClick={submit}><Upload className="w-4 h-4 mr-2" />Import Questions</Button></div></ModalShell>;
+}
+
+function FinalQuestionsOverlay({ questions, onClose }: { questions: MCQQuestion[]; onClose: () => void }) {
+  return <ModalShell title="Final Questions" onClose={onClose} wide><div className="space-y-3 max-h-[70vh] overflow-auto pr-2">{questions.filter(q => q.status === 'approved').map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={() => undefined} />)}</div></ModalShell>;
+}
+
+function SaveConfirmOverlay({ onClose, onConfirm }: { onClose: () => void; onConfirm: () => void }) {
+  return <ModalShell title="Save Assessment" onClose={onClose}><div className="space-y-4"><div className="p-4 rounded-lg bg-danger-light border border-destructive/20"><p className="text-[13px] font-semibold text-navy">This action cannot be reverted.</p><p className="text-[12px] text-muted-foreground mt-1">Saving attaches the final MCQ test to this round for operational use.</p></div><div className="flex gap-2 justify-end"><Button variant="outline" onClick={onClose}>Cancel</Button><Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={onConfirm}>Confirm & Save</Button></div></div></ModalShell>;
+}
+
+function ModalShell({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+  return <div className="fixed inset-0 z-[80] bg-navy/40 backdrop-blur-sm flex items-center justify-center p-6"><div className={cn('hnx-card p-5 shadow-2xl animate-fade-in max-h-[88vh] overflow-hidden', wide ? 'w-full max-w-5xl' : 'w-full max-w-xl')}><div className="flex items-center justify-between mb-4"><h3 className="text-[16px] font-bold text-navy">{title}</h3><button onClick={onClose} className="w-8 h-8 rounded-md hover:bg-muted flex items-center justify-center"><X className="w-4 h-4" /></button></div>{children}</div></div>;
+}
+
 function Stat({ label, value, tone = 'default' }: { label: string; value: string; tone?: 'default' | 'green' | 'warn' }) {
   const tones = { default: 'text-foreground', green: 'text-hnxgreen-deep', warn: 'text-warning' };
   return (
