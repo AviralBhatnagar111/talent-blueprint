@@ -78,16 +78,6 @@ export default function TemplateBuilder() {
     updateRounds(job.id, rounds.filter(r => r.id !== id));
     toast('Round removed');
   };
-  const duplicateRound = (id: string) => {
-    const src = rounds.find(r => r.id === id);
-    if (!src) return;
-    const copy: Round = { ...src, id: `r-${Date.now()}`, label: src.label + ' (copy)', assessmentStatus: 'not_built', assessmentId: undefined };
-    const idx = rounds.findIndex(r => r.id === id);
-    const next = [...rounds];
-    next.splice(idx + 1, 0, copy);
-    updateRounds(job.id, next);
-    toast('Round duplicated');
-  };
   const addRound = (type: RoundType) => {
     const meta = ROUND_META[type];
     const newRound: Round = {
@@ -107,7 +97,7 @@ export default function TemplateBuilder() {
   };
 
   const saveTemplate = () => {
-    toast.success('Template saved', { description: 'Your hiring plan is ready to use.' });
+    toast.success('Job template saved', { description: 'Your round plan is ready to use.' });
   };
 
   const updateRoundSkills = (roundId: string, skills: string[]) => {
@@ -199,7 +189,6 @@ export default function TemplateBuilder() {
                 onToggleExpand={() => toggleExpand(round.id)}
                 onUpdate={(patch) => updateRound(round.id, patch)}
                 onDelete={() => deleteRound(round.id)}
-                onDuplicate={() => duplicateRound(round.id)}
                 onDragStart={() => handleDragStart(round.id)}
                 onDragOver={(e) => handleDragOver(e, round.id)}
                 onDragEnd={() => setDragId(null)}
@@ -302,7 +291,7 @@ export default function TemplateBuilder() {
 // ============== Round Card ==============
 
 function RoundCard({
-  round, index, expanded, onToggleExpand, onUpdate, onDelete, onDuplicate,
+  round, index, expanded, onToggleExpand, onUpdate, onDelete,
   onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange,
 }: {
   round: Round;
@@ -311,7 +300,6 @@ function RoundCard({
   onToggleExpand: () => void;
   onUpdate: (patch: Partial<Round>) => void;
   onDelete: () => void;
-  onDuplicate: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
