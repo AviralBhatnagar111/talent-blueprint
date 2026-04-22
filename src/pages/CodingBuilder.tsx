@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Check, X, RefreshCw, Lock,
   Unlock, Trash2, AlertTriangle, Shield, CheckCircle2, Clock, Minus, Plus, Zap,
-  Code2, Terminal, FileCode, Play, Pencil,
+  Code2, Terminal, FileCode, Play, Pencil, Eye, FilePlus2,
 } from 'lucide-react';
 import { ContextTopBar } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
@@ -25,7 +25,7 @@ import type { CodingBlueprint, CodingLanguage, CodingProblem, CodingProblemType 
 
 const STEPS = [
   { number: 1, label: 'Confirm Context' },
-  { number: 2, label: 'Generate Problems' },
+  { number: 2, label: 'Problem Pool' },
   { number: 3, label: 'Review & Finalize' },
 ];
 
@@ -49,6 +49,9 @@ export default function CodingBuilder() {
   const [assessmentName, setAssessmentName] = useState('Coding Assessment — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
   const [expandedProblem, setExpandedProblem] = useState<string | null>(null);
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  const [showFinalProblems, setShowFinalProblems] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
   if (!job || !round || !context) {
     return <AppLayout bare><div className="p-8">Not found. <Link to="/jobs" className="text-primary">Back to Jobs</Link></div></AppLayout>;
@@ -77,7 +80,13 @@ export default function CodingBuilder() {
       status: 'ready',
     });
     toast.success('Coding Assessment saved & attached', { description: `${blueprint.problemsToSend} problems attached to ${round.label}` });
-    navigate(`/jobs/${job.id}/template`);
+    navigate(`/jobs/${job.id}`);
+  };
+
+  const addManualProblem = (problem: CodingProblem) => {
+    setProblems(ps => [problem, ...ps]);
+    setStep(2);
+    toast.success('Problem added to pool');
   };
 
   const toggleLanguage = (l: CodingLanguage) =>
