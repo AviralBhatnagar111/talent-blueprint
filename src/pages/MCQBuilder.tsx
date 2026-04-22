@@ -261,7 +261,8 @@ export default function MCQBuilder() {
           {/* Step 2 — Review workspace */}
           {step === 2 && !generating && questions.length > 0 && (
             <div className="space-y-4 animate-fade-in">
-              <div className="hnx-card p-4 flex items-center gap-4 flex-wrap">
+              <div className="hnx-card p-4 space-y-4">
+                <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-3 mr-auto">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                     <ListChecks className="w-4 h-4" strokeWidth={2.5} />
@@ -272,16 +273,30 @@ export default function MCQBuilder() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setQuestions(qs => qs.map(q => ({ ...q, status: 'approved' })))}>
+                    <Check className="w-3.5 h-3.5 mr-1" />Approve All
+                  </Button>
                   <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setShowBulkImport(true)}>
-                    <Upload className="w-3.5 h-3.5 mr-1" />Bulk Import
+                    <Upload className="w-3.5 h-3.5 mr-1" />Bulk Upload
                   </Button>
                   <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
                     <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Question Manually
                   </Button>
                 </div>
+                </div>
+                <div className="flex items-center gap-2 border-t pt-3">
+                  <PoolTabButton active={poolTab === 'ai'} onClick={() => setPoolTab('ai')} label="AI Generated" count={aiCount} />
+                  <PoolTabButton active={poolTab === 'upload'} onClick={() => setPoolTab('upload')} label="Bulk Upload" count={uploadCount} />
+                  <PoolTabButton active={poolTab === 'all'} onClick={() => setPoolTab('all')} label="Total Pool" count={questions.length} />
+                </div>
               </div>
 
-              {questions.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />)}
+              {visibleQuestions.length > 0 ? visibleQuestions.map((q, i) => <QuestionCard key={q.id} question={q} index={i} onUpdate={(p) => updateQuestion(q.id, p)} />) : (
+                <div className="hnx-card p-8 text-center">
+                  <p className="text-[14px] font-bold text-navy">No questions in this tab yet</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">Generate with AI or upload a CSV/text file to fill this pool.</p>
+                </div>
+              )}
 
               <div className="flex justify-between items-center pt-2">
                 <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
