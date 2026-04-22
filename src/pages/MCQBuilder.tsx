@@ -522,6 +522,20 @@ function DifficultyMixEditor({ value, onChange }: { value: { easy: number; mediu
   );
 }
 
+function PoolTabButton({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count: number }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'h-8 px-3 rounded-md text-[12px] font-semibold border transition-all inline-flex items-center gap-2',
+        active ? 'bg-primary text-primary-foreground border-primary shadow-sm' : 'bg-card text-muted-foreground border-border hover:text-foreground hover:border-primary/30',
+      )}
+    >
+      {label}<span className={cn('text-[10px] rounded-full px-1.5 py-0.5', active ? 'bg-primary-foreground/20' : 'bg-muted')}>{count}</span>
+    </button>
+  );
+}
+
 function QuestionCard({ question, index, onUpdate }: { question: MCQQuestion; index: number; onUpdate: (p: Partial<MCQQuestion>) => void }) {
   const [showExp, setShowExp] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
