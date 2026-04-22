@@ -268,14 +268,7 @@ export default function TemplateBuilder() {
               </ChecklistItem>
               {notBuiltAssessments.map(r => (
                 <ChecklistItem key={r.id} icon={AlertCircle} tone="warn">
-                  {r.label} not yet built —{' '}
-                  <button
-                    className="text-teal-deep font-semibold hover:underline"
-                    onClick={() => {
-                      if (r.type === 'MCQ') navigate(`/jobs/${job.id}/template/rounds/${r.id}/mcq-builder`);
-                      if (r.type === 'Coding') navigate(`/jobs/${job.id}/template/rounds/${r.id}/coding-builder`);
-                    }}
-                  >build now</button>
+                  {r.label} assessment not ready
                 </ChecklistItem>
               ))}
               <ChecklistItem tone="info" icon={Clock}>
@@ -300,13 +293,8 @@ export default function TemplateBuilder() {
             </div>
           </PanelSection>
 
-          <Button onClick={() => setPreviewOpen(true)} variant="outline" className="w-full h-9 text-[12px]">
-            <Eye className="w-3.5 h-3.5 mr-1.5" />Preview Candidate Journey
-          </Button>
         </IntelligencePanel>
       </div>
-
-      {previewOpen && <CandidateJourneyPreview job={job} onClose={() => setPreviewOpen(false)} />}
     </AppLayout>
   );
 }
