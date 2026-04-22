@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
-  GripVertical, Plus, Trash2, Copy, Sparkles, X, ChevronDown, ChevronRight,
+  GripVertical, Plus, Trash2, Sparkles, X, ChevronDown, ChevronRight,
   AlertCircle, Save, Clock,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
@@ -385,47 +385,29 @@ function RoundCard({
 
       {/* Expanded details */}
       {expanded && (
-        <div className="px-4 pb-4 pt-2 border-t border-border/50 bg-muted/20 grid grid-cols-2 gap-4 animate-fade-in-fast">
-          <div>
-            <label className="hnx-label block mb-1">Purpose</label>
-            <textarea
-              value={round.purpose || ''}
-              onChange={(e) => onUpdate({ purpose: e.target.value })}
-              placeholder="What does this round evaluate?"
-              className="w-full min-h-[60px] rounded-md border border-input bg-card p-2 text-[12px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-            />
-          </div>
-          <div>
-            <label className="hnx-label block mb-1">Notes</label>
-            <textarea
-              value={round.notes || ''}
-              onChange={(e) => onUpdate({ notes: e.target.value })}
-              placeholder="Internal notes for evaluators"
-              className="w-full min-h-[60px] rounded-md border border-input bg-card p-2 text-[12px] focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="hnx-label block mb-1">Duration</label>
-              <div className="flex items-center gap-1.5">
-                <input type="number" value={round.durationMin} onChange={(e) => onUpdate({ durationMin: +e.target.value })} className="hnx-input w-16 h-8" />
-                <span className="text-[11px] text-muted-foreground">min</span>
-              </div>
+        <div className="px-4 pb-4 pt-3 border-t border-border/50 bg-muted/20 animate-fade-in-fast">
+          <label className="hnx-label block mb-2">Skills to be assessed</label>
+          <div className="rounded-lg border border-border bg-card p-3">
+            <div className="flex flex-wrap gap-2">
+              {skills.map(skill => {
+                const active = selectedSkills.includes(skill);
+                return (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleSkill(skill)}
+                    className={cn(
+                      'rounded-md border px-2.5 py-1.5 text-[12px] font-semibold transition-all',
+                      active
+                        ? 'border-teal bg-teal-light text-teal-deep'
+                        : 'border-border bg-background text-muted-foreground hover:border-teal/50 hover:text-foreground'
+                    )}
+                  >
+                    {skill}
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <label className="hnx-label block mb-1">Pass %</label>
-              <input type="number" value={round.passThreshold || 60} onChange={(e) => onUpdate({ passThreshold: +e.target.value })} className="hnx-input w-16 h-8" />
-            </div>
-          </div>
-          <div className="flex items-end gap-4">
-            <label className="flex items-center gap-1.5 text-[12px] cursor-pointer">
-              <input type="checkbox" checked={round.mandatory} onChange={(e) => onUpdate({ mandatory: e.target.checked })} className="accent-primary" />
-              Mandatory
-            </label>
-            <label className="flex items-center gap-1.5 text-[12px] cursor-pointer">
-              <input type="checkbox" checked={round.autoTrigger} onChange={(e) => onUpdate({ autoTrigger: e.target.checked })} className="accent-primary" />
-              Auto-trigger
-            </label>
           </div>
         </div>
       )}
