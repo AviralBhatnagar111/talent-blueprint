@@ -593,16 +593,27 @@ function ManualQuestionModal({ onClose, onAdd, competencyName, skillTag }: { onC
 
 function BulkImportModal({ onClose, onImport, competencyName, skillTag }: { onClose: () => void; onImport: (q: MCQQuestion[]) => void; competencyName: string; skillTag: string }) {
   const [bulk, setBulk] = useState('What is React used for?\nA. Styling only\nB. Building user interfaces*\nC. Database hosting\nD. Server monitoring\nExplanation: React is a UI library.');
+  const parseCsv = (text: string) => text.split(/\r?\n/).slice(1).filter(Boolean).map((line, idx) => {
+    const cols = line.match(/("[^"]*"|[^,]+)/g)?.map(c => c.replace(/^"|"$/g, '').trim()) || [];
+    const correct = Math.max(0, ['A', 'B', 'C', 'D'].indexOf((cols[5] || 'A').toUpperCase()));
+    return { id: `upload-${Date.now()}-${idx}`, text: cols[0] || `Imported question ${idx + 1}`, options: [1, 2, 3, 4].map((n, i) => ({ id: String.fromCharCode(97 + i), text: cols[n] || `Option ${n}`, isCorrect: i === correct })), explanation: cols[6] || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: ((cols[7] as MCQQuestion['difficulty']) || 'Medium'), type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
+  });
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onImport(parseCsv(String(reader.result || '')));
+    reader.readAsText(file);
+  };
   const submit = () => {
     const blocks = bulk.split(/\n\s*\n/).filter(Boolean);
     const imported = blocks.map((block, idx) => {
       const lines = block.split('\n').filter(Boolean);
       const opts = lines.slice(1, 5).map((line, i) => ({ id: String.fromCharCode(97 + i), text: line.replace(/^[A-D]\.?\s*/i, '').replace('*', ''), isCorrect: line.includes('*') || i === 0 }));
-      return { id: `import-${Date.now()}-${idx}`, text: lines[0], options: opts, explanation: lines.find(l => l.toLowerCase().startsWith('explanation'))?.replace(/explanation:\s*/i, '') || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: 'Medium' as const, type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
+      return { id: `upload-${Date.now()}-${idx}`, text: lines[0], options: opts, explanation: lines.find(l => l.toLowerCase().startsWith('explanation'))?.replace(/explanation:\s*/i, '') || 'Imported question explanation.', competencyId: 'imported', competencyName, skillTag, difficulty: 'Medium' as const, type: 'MCQ' as const, estimatedTimeSec: 60, status: 'pending' as const, freshness: 'new' as const };
     });
     onImport(imported);
   };
-  return <ModalShell title="Bulk Import Questions" onClose={onClose}><div className="space-y-3"><p className="text-[12px] text-muted-foreground">Paste blocks with one question, four options, mark correct option with *, and optional explanation.</p><textarea value={bulk} onChange={(e) => setBulk(e.target.value)} className="hnx-input min-h-64 w-full font-mono text-[12px]" /><Button className="w-full bg-primary" onClick={submit}><Upload className="w-4 h-4 mr-2" />Import Questions</Button></div></ModalShell>;
+  return <ModalShell title="Bulk Upload Questions" onClose={onClose}><div className="space-y-3"><p className="text-[12px] text-muted-foreground">Upload CSV columns: question, option1, option2, option3, option4, correct(A-D), explanation, difficulty. You can also paste blocks below.</p><label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-5 text-[13px] font-semibold text-primary cursor-pointer"><Upload className="w-4 h-4" />Upload CSV file<input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} /></label><textarea value={bulk} onChange={(e) => setBulk(e.target.value)} className="hnx-input min-h-56 w-full font-mono text-[12px]" /><Button className="w-full bg-primary" onClick={submit}><Upload className="w-4 h-4 mr-2" />Import Pasted Questions</Button></div></ModalShell>;
 }
 
 function FinalQuestionsOverlay({ questions, onClose }: { questions: MCQQuestion[]; onClose: () => void }) {
