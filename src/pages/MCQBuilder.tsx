@@ -340,7 +340,10 @@ export default function MCQBuilder() {
                 </div>
                 <div className="mt-5 pt-4 border-t flex flex-col gap-2">
                   <Button variant="outline" className="w-full" onClick={() => setStep(2)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back to Questions</Button>
-                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={save}>
+                  <Button variant="outline" className="w-full" onClick={() => setShowFinalQuestions(true)}>
+                    <Eye className="w-4 h-4 mr-1.5" />View Final Questions
+                  </Button>
+                  <Button className="w-full bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold" onClick={() => setShowSaveConfirm(true)}>
                     <CheckCircle2 className="w-4 h-4 mr-1.5" />Save & Attach
                   </Button>
                 </div>
