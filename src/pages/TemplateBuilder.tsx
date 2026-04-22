@@ -303,7 +303,7 @@ export default function TemplateBuilder() {
 
 function RoundCard({
   round, index, expanded, onToggleExpand, onUpdate, onDelete, onDuplicate,
-  onDragStart, onDragOver, onDragEnd, isDragging, onBuildAssessment,
+  onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange,
 }: {
   round: Round;
   index: number;
@@ -316,11 +316,19 @@ function RoundCard({
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   isDragging: boolean;
-  onBuildAssessment: () => void;
+  skills: string[];
+  selectedSkills: string[];
+  onSkillsChange: (skills: string[]) => void;
 }) {
   const meta = ROUND_META[round.type];
   const isAssessment = round.type === 'MCQ' || round.type === 'Coding';
   const isReady = round.assessmentStatus === 'ready';
+  const toggleSkill = (skill: string) => {
+    onSkillsChange(selectedSkills.includes(skill)
+      ? selectedSkills.filter(s => s !== skill)
+      : [...selectedSkills, skill]
+    );
+  };
 
   return (
     <div
@@ -354,53 +362,18 @@ function RoundCard({
             onChange={(e) => onUpdate({ label: e.target.value })}
             className="text-[14px] font-bold text-navy bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 -mx-1 w-full max-w-md"
           />
-          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-muted-foreground">
-            <span>{meta.name}</span>
-            <span>·</span>
-            <span>{round.durationMin} min</span>
-            <span>·</span>
-            <span className={cn('font-medium', round.mandatory ? 'text-foreground' : 'text-muted-foreground')}>
-              {round.mandatory ? 'Mandatory' : 'Optional'}
-            </span>
-            <span>·</span>
-            <span>{round.autoTrigger ? 'Auto-trigger' : 'Manual'}</span>
+          <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
             {isAssessment && (
-              <>
-                <span>·</span>
-                <span className={cn('inline-flex items-center gap-1 font-semibold',
-                  isReady ? 'text-hnxgreen-deep' : 'text-warning')}>
-                  {isReady ? <CheckCircle2 className="w-3 h-3" strokeWidth={2.5} /> : <AlertCircle className="w-3 h-3" strokeWidth={2.5} />}
-                  {isReady ? `Assessment Ready${round.assessmentMeta ? ` · ${round.assessmentMeta.count} ${round.assessmentMeta.unit}` : ''}` : 'Not built'}
-                </span>
-              </>
+              <span className={cn('inline-flex items-center gap-1 font-semibold', isReady ? 'text-hnxgreen-deep' : 'text-warning')}>
+                <AlertCircle className="w-3 h-3" strokeWidth={2.5} />
+                {isReady ? 'Assessment Ready' : 'Not built'}
+              </span>
             )}
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {isAssessment && (
-            <Button size="sm" onClick={onBuildAssessment} className={cn(
-              'h-8 text-[12px] font-semibold',
-              isReady ? 'bg-teal-light text-teal-deep border border-teal/30 hover:bg-teal-light/70' : 'bg-hnxgreen hover:bg-hnxgreen-deep text-navy'
-            )}>
-              {isReady ? 'Edit Assessment' : 'Build Assessment'}
-              <ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
-          {round.type === 'AIInterview' && (
-            <Button size="sm" variant="outline" className="h-8 text-[12px] border-teal/30 text-teal-deep hover:bg-teal-light/50">
-              Configure<ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
-          {round.type === 'ManualInterview' && (
-            <Button size="sm" variant="outline" className="h-8 text-[12px]">
-              Assign Panel<ArrowRight className="w-3.5 h-3.5 ml-1" />
-            </Button>
-          )}
-          <button onClick={onDuplicate} className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center text-muted-foreground" aria-label="Duplicate">
-            <Copy className="w-3.5 h-3.5" />
-          </button>
           <button onClick={onDelete} className="h-8 w-8 rounded-md hover:bg-destructive/10 hover:text-destructive flex items-center justify-center text-muted-foreground" aria-label="Delete">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
