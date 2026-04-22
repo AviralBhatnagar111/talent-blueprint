@@ -410,6 +410,11 @@ export default function MCQBuilder() {
           )}
         </IntelligencePanel>
       </div>
+
+      {showManualAdd && <ManualQuestionModal onClose={() => setShowManualAdd(false)} onAdd={addManualQuestion} competencyName={job.competencies[0]?.name || 'Role Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} />}
+      {showBulkImport && <BulkImportModal onClose={() => setShowBulkImport(false)} onImport={importQuestions} competencyName={job.competencies[0]?.name || 'Role Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} />}
+      {showFinalQuestions && <FinalQuestionsOverlay questions={questions} onClose={() => setShowFinalQuestions(false)} />}
+      {showSaveConfirm && <SaveConfirmOverlay onClose={() => setShowSaveConfirm(false)} onConfirm={save} />}
     </AppLayout>
   );
 }
@@ -473,74 +478,56 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
+function DifficultyMixEditor({ value, onChange }: { value: { easy: number; medium: number; hard: number }; onChange: (v: { easy: number; medium: number; hard: number }) => void }) {
+  const setPart = (key: 'easy' | 'medium' | 'hard', next: number) => onChange({ ...value, [key]: Math.max(0, Math.min(100, next)) });
+  return (
+    <div className="space-y-3">
+      <DifficultyBar easy={value.easy} medium={value.medium} hard={value.hard} />
+      {(['easy', 'medium', 'hard'] as const).map((key) => (
+        <div key={key} className="flex items-center gap-3">
+          <span className="w-14 text-[11px] font-semibold text-muted-foreground capitalize">{key}</span>
+          <input type="range" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="flex-1 accent-primary" />
+          <input type="number" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="hnx-input h-8 w-16 text-center" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function QuestionCard({ question, index, onUpdate }: { question: MCQQuestion; index: number; onUpdate: (p: Partial<MCQQuestion>) => void }) {
   const [showExp, setShowExp] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const diffBar = question.difficulty === 'Easy' ? 'bg-hnxgreen-deep' : question.difficulty === 'Medium' ? 'bg-warning' : 'bg-destructive/80';
   const diffTone = question.difficulty === 'Easy' ? 'bg-green-light text-hnxgreen-deep' : question.difficulty === 'Medium' ? 'bg-warning-light text-warning' : 'bg-danger-light text-destructive';
   const isApproved = question.status === 'approved';
-  const isLocked = question.status === 'locked';
-  const isFlagged = question.status === 'flagged';
 
   return (
     <div className={cn(
       'hnx-card relative overflow-hidden group transition-all',
       isApproved && 'bg-teal-light/30 border-teal/30',
-      isFlagged && 'border-warning/40',
     )}>
       <span className={cn('absolute left-0 top-0 bottom-0 w-1', diffBar)} />
       <div className="p-4 pl-5">
         <div className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 accent-primary" />
+          <input type="checkbox" checked={isApproved} onChange={(e) => onUpdate({ status: e.target.checked ? 'approved' : 'pending' })} className="mt-1 accent-primary" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[11px] font-mono font-bold text-muted-foreground">Q{index + 1}</span>
               <span className={cn('hnx-badge', diffTone)}>{question.difficulty}</span>
               <SkillChip label={question.competencyName} variant="teal" size="xs" />
               <SkillChip label={question.type === 'TrueFalse' ? 'True/False' : question.type} variant="muted" size="xs" />
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{question.estimatedTimeSec}s</span>
-              {isFlagged && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-warning">
-                  <AlertTriangle className="w-3 h-3" strokeWidth={2.5} />Review suggested
-                </span>
-              )}
             </div>
             <p className="text-[14px] font-semibold text-navy leading-snug mb-3">{question.text}</p>
-            <div className="space-y-1.5 mb-2">
-              {question.options.map((o, i) => (
-                <div key={o.id} className={cn(
-                  'flex items-center gap-2.5 p-2 rounded-md border text-[12.5px]',
-                  o.isCorrect ? 'bg-green-light/60 border-hnxgreen/30 text-hnxgreen-deep font-medium' : 'bg-card border-border text-foreground/80'
-                )}>
-                  <span className={cn(
-                    'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0',
-                    o.isCorrect ? 'bg-hnxgreen text-navy' : 'bg-muted text-muted-foreground'
-                  )}>
-                    {o.isCorrect ? <Check className="w-3 h-3" strokeWidth={3} /> : String.fromCharCode(65 + i)}
-                  </span>
-                  {o.text}
-                </div>
-              ))}
-            </div>
+            <button onClick={() => setShowOptions(!showOptions)} className="inline-flex items-center gap-1 text-[11px] text-primary font-semibold hover:underline mr-4">
+              <ChevronDown className={cn('w-3 h-3 transition-transform', showOptions && 'rotate-180')} />{showOptions ? 'Hide' : 'View'} options
+            </button>
             <button onClick={() => setShowExp(!showExp)} className="text-[11px] text-primary font-semibold hover:underline">
               {showExp ? 'Hide' : 'View'} explanation
             </button>
+            {showOptions && <div className="space-y-1.5 mt-3 mb-2 animate-fade-in-fast">{question.options.map((o, i) => <div key={o.id} className={cn('flex items-center gap-2.5 p-2 rounded-md border text-[12.5px]', o.isCorrect ? 'bg-green-light/60 border-hnxgreen/30 text-hnxgreen-deep font-medium' : 'bg-card border-border text-foreground/80')}><span className={cn('w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0', o.isCorrect ? 'bg-hnxgreen text-navy' : 'bg-muted text-muted-foreground')}>{o.isCorrect ? <Check className="w-3 h-3" strokeWidth={3} /> : String.fromCharCode(65 + i)}</span>{o.text}</div>)}</div>}
             {showExp && (
               <p className="mt-2 p-2.5 rounded-md bg-muted/40 text-[12px] text-foreground/80 leading-relaxed animate-fade-in-fast">{question.explanation}</p>
             )}
-          </div>
-          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => onUpdate({ status: isApproved ? 'pending' : 'approved' })} className={cn('w-8 h-8 rounded-md flex items-center justify-center', isApproved ? 'bg-hnxgreen text-navy' : 'hover:bg-hnxgreen/20 text-muted-foreground')} aria-label="Approve">
-              <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-            </button>
-            <button onClick={() => onUpdate({ status: 'pending' })} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Regenerate">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => onUpdate({ status: isLocked ? 'approved' : 'locked' })} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Lock">
-              {isLocked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-            </button>
-            <button onClick={() => onUpdate({ status: 'removed' })} className="w-8 h-8 rounded-md hover:bg-destructive/10 hover:text-destructive text-muted-foreground flex items-center justify-center" aria-label="Remove">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
       </div>
