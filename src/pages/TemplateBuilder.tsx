@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   GripVertical, Plus, Trash2, Copy, Sparkles, X, ChevronDown, ChevronRight,
-  CheckCircle2, AlertCircle, Lightbulb, Save, ArrowRight, Eye, Clock,
+  AlertCircle, Save, Clock,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { ROUND_META, RoundTypeIcon } from '@/components/shared/RoundIcon';
@@ -22,7 +22,6 @@ const ADDABLE_ROUND_TYPES: RoundType[] = ['Screening', 'MCQ', 'Coding', 'AIInter
 
 export default function TemplateBuilder() {
   const { jobId } = useParams<{ jobId: string }>();
-  const navigate = useNavigate();
   const job = useStore(s => s.getJob(jobId!));
   const updateRounds = useStore(s => s.updateJobRounds);
 
@@ -30,7 +29,7 @@ export default function TemplateBuilder() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<Record<string, string[]>>({});
 
   if (!job) {
     return <AppLayout bare><div className="p-8">Job not found.</div></AppLayout>;
@@ -41,6 +40,11 @@ export default function TemplateBuilder() {
   const readyCount = rounds.filter(r => r.assessmentStatus === 'ready').length;
   const assessmentRounds = rounds.filter(r => r.type === 'MCQ' || r.type === 'Coding');
   const notBuiltAssessments = assessmentRounds.filter(r => r.assessmentStatus === 'not_built');
+  const assessableSkills = Array.from(new Set([
+    ...job.roleContext.primarySkills,
+    ...job.roleContext.secondarySkills,
+    ...job.competencies.map(c => c.name),
+  ]));
 
   const readiness = Math.round(
     (rounds.length >= 3 ? 30 : 10) +
@@ -106,6 +110,10 @@ export default function TemplateBuilder() {
     toast.success('Template saved', { description: 'Your hiring plan is ready to use.' });
   };
 
+  const updateRoundSkills = (roundId: string, skills: string[]) => {
+    setSelectedSkills(prev => ({ ...prev, [roundId]: skills }));
+  };
+
   return (
     <AppLayout bare>
       <ContextTopBar
@@ -113,7 +121,7 @@ export default function TemplateBuilder() {
         backLabel="Job Details"
         breadcrumbs={[
           { label: job.title, to: `/jobs/${job.id}` },
-          { label: 'Hiring Plan' },
+          { label: 'Job Template' },
         ]}
         chips={
           <>
@@ -145,7 +153,7 @@ export default function TemplateBuilder() {
         <div className="min-w-0 space-y-5">
           <div className="flex items-end justify-between">
             <div>
-              <h1 className="text-[22px] font-bold tracking-tight text-navy">Hiring Plan</h1>
+              <h1 className="text-[22px] font-bold tracking-tight text-navy">Job Template</h1>
               <p className="text-[13px] text-muted-foreground mt-0.5">Design the candidate evaluation journey for this role</p>
             </div>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -196,10 +204,9 @@ export default function TemplateBuilder() {
                 onDragOver={(e) => handleDragOver(e, round.id)}
                 onDragEnd={() => setDragId(null)}
                 isDragging={dragId === round.id}
-                onBuildAssessment={() => {
-                  if (round.type === 'MCQ') navigate(`/jobs/${job.id}/template/rounds/${round.id}/mcq-builder`);
-                  else if (round.type === 'Coding') navigate(`/jobs/${job.id}/template/rounds/${round.id}/coding-builder`);
-                }}
+                skills={assessableSkills}
+                selectedSkills={selectedSkills[round.id] || []}
+                onSkillsChange={(skills) => updateRoundSkills(round.id, skills)}
               />
             ))}
           </div>
