@@ -297,7 +297,7 @@ export default function MCQBuilder() {
                   <div className="bg-card rounded-lg p-4 border mb-4">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Question 1 of {blueprint.questionsToSend}</span>
-                      <span className="text-[12px] font-mono text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />29:45</span>
+                      <span className="text-[12px] font-mono text-muted-foreground">29:45</span>
                     </div>
                     <p className="text-[14px] text-navy font-semibold mb-3">{questions[0]?.text}</p>
                     <div className="space-y-2">
@@ -381,7 +381,7 @@ export default function MCQBuilder() {
                   <Stat label="Pool" value={`${blueprint.poolSize}`} />
                   <Stat label="Selected" value={`${questions.length}`} />
                   <Stat label="Approved" value={`${approved}/${questions.length}`} tone="green" />
-                  <Stat label="Flagged" value={`${flagged}`} tone={flagged > 0 ? 'warn' : 'default'} />
+                  <Stat label="Pending" value={`${pending}`} tone={pending > 0 ? 'warn' : 'default'} />
                 </div>
               </PanelSection>
 
@@ -393,7 +393,7 @@ export default function MCQBuilder() {
                 <ChecklistItem tone="ok">Anti-repeat: Active</ChecklistItem>
                 <ChecklistItem tone="ok">Freshness: High</ChecklistItem>
                 <ChecklistItem tone="ok">Role alignment: Strict</ChecklistItem>
-                {flagged > 0 && <ChecklistItem icon={AlertTriangle} tone="warn">{flagged} question{flagged > 1 ? 's' : ''} flagged for review</ChecklistItem>}
+                {pending > 0 && <ChecklistItem icon={AlertTriangle} tone="warn">{pending} question{pending > 1 ? 's' : ''} still unchecked</ChecklistItem>}
               </PanelSection>
             </>
           ) : (
