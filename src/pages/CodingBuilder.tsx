@@ -468,6 +468,22 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
+function DifficultyMixEditor({ value, onChange }: { value: { easy: number; medium: number; hard: number }; onChange: (v: { easy: number; medium: number; hard: number }) => void }) {
+  const setPart = (key: 'easy' | 'medium' | 'hard', next: number) => onChange({ ...value, [key]: Math.max(0, Math.min(100, next)) });
+  return (
+    <div className="space-y-3">
+      <DifficultyBar easy={value.easy} medium={value.medium} hard={value.hard} />
+      {(['easy', 'medium', 'hard'] as const).map((key) => (
+        <div key={key} className="flex items-center gap-3">
+          <span className="w-14 text-[11px] font-semibold text-muted-foreground capitalize">{key}</span>
+          <input type="range" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="flex-1 accent-primary" />
+          <input type="number" min={0} max={100} value={value[key]} onChange={(e) => setPart(key, +e.target.value)} className="hnx-input h-8 w-16 text-center" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CodingCard({ problem, index, expanded, onToggleExpand, onUpdate }: {
   problem: CodingProblem; index: number; expanded: boolean; onToggleExpand: () => void; onUpdate: (p: Partial<CodingProblem>) => void;
 }) {
@@ -480,14 +496,13 @@ function CodingCard({ problem, index, expanded, onToggleExpand, onUpdate }: {
       <span className={cn('absolute left-0 top-0 bottom-0 w-1', diffBar)} />
       <div className="p-4 pl-5">
         <div className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 accent-primary" />
+          <input type="checkbox" checked={isApproved} onChange={(e) => onUpdate({ status: e.target.checked ? 'approved' : 'pending' })} className="mt-1 accent-primary" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="text-[11px] font-mono font-bold text-muted-foreground">P{index + 1}</span>
               <span className={cn('hnx-badge', diffTone)}>{problem.difficulty}</span>
               <SkillChip label={problem.competencyName} variant="teal" size="xs" />
               <SkillChip label={problem.problemType} variant="muted" size="xs" />
-              <span className="text-[10px] text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{problem.estimatedSolveTimeMin} min</span>
               <span className="text-[10px] text-muted-foreground">· {problem.scoring.maxPoints} pts</span>
               {problem.highRoleFit && <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-deep"><Sparkles className="w-3 h-3" strokeWidth={2.5} />High role-fit</span>}
               {problem.freshness === 'new' && <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-hnxgreen-deep">Fresh</span>}
@@ -535,23 +550,6 @@ function CodingCard({ problem, index, expanded, onToggleExpand, onUpdate }: {
                 </DetailBlock>
               </div>
             )}
-          </div>
-          <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            <button onClick={() => onUpdate({ status: isApproved ? 'pending' : 'approved' })} className={cn('w-8 h-8 rounded-md flex items-center justify-center', isApproved ? 'bg-hnxgreen text-navy' : 'hover:bg-hnxgreen/20 text-muted-foreground')} aria-label="Approve">
-              <Check className="w-3.5 h-3.5" strokeWidth={2.5} />
-            </button>
-            <button onClick={() => toast('Regenerating…')} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Regenerate">
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
-            <button className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Edit">
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => onUpdate({ status: 'locked' })} className="w-8 h-8 rounded-md hover:bg-muted text-muted-foreground flex items-center justify-center" aria-label="Lock">
-              <Lock className="w-3.5 h-3.5" />
-            </button>
-            <button onClick={() => onUpdate({ status: 'removed' })} className="w-8 h-8 rounded-md hover:bg-destructive/10 hover:text-destructive text-muted-foreground flex items-center justify-center" aria-label="Remove">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
       </div>
