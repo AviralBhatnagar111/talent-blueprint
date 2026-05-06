@@ -74,6 +74,7 @@ export type MCQType = 'MCQ' | 'TrueFalse' | 'Scenario' | 'ShortAnswer';
 export interface MCQBlueprint {
   questionsToSend: number;
   poolSize: number;
+  questionsToGenerate: number;
   durationMin: number;
   difficultyMix: { easy: number; medium: number; hard: number };
   questionTypes: MCQType[];
@@ -100,6 +101,7 @@ export interface MCQQuestion {
   status: 'pending' | 'approved' | 'flagged' | 'locked' | 'removed';
   reviewFlag?: 'ambiguous' | 'too_easy' | 'too_hard' | 'duplicate_risk';
   freshness: 'new' | 'recent' | 'stale';
+  source?: 'ai' | 'upload' | 'manual';
 }
 
 // -------------------- Coding --------------------
@@ -120,6 +122,7 @@ export type CodingLanguage = 'JavaScript' | 'TypeScript' | 'Python' | 'Java' | '
 export interface CodingBlueprint {
   problemsToSend: number;
   poolSize: number;
+  problemsToGenerate: number;
   durationMin: number;
   difficultyMix: { easy: number; medium: number; hard: number };
   languages: CodingLanguage[];
@@ -158,6 +161,7 @@ export interface CodingProblem {
   reviewFlag?: 'leetcode_similar' | 'ambiguous' | 'too_easy' | 'too_hard';
   freshness: 'new' | 'recent' | 'stale';
   highRoleFit?: boolean;
+  source?: 'ai' | 'manual';
 }
 
 // -------------------- Job / Template --------------------
