@@ -93,6 +93,7 @@ const salesRounds: Round[] = [
 export const defaultMCQBlueprint: MCQBlueprint = {
   questionsToSend: 20,
   poolSize: 60,
+  questionsToGenerate: 60,
   durationMin: 30,
   difficultyMix: { easy: 30, medium: 50, hard: 20 },
   questionTypes: ['MCQ', 'TrueFalse', 'Scenario'],
@@ -108,6 +109,7 @@ export const defaultMCQBlueprint: MCQBlueprint = {
 export const defaultCodingBlueprint: CodingBlueprint = {
   problemsToSend: 5,
   poolSize: 15,
+  problemsToGenerate: 15,
   durationMin: 90,
   difficultyMix: { easy: 20, medium: 60, hard: 20 },
   languages: ['JavaScript', 'TypeScript'],

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
@@ -6,19 +6,21 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   GripVertical, Plus, Trash2, Sparkles, X, ChevronDown, ChevronRight,
-  AlertCircle, Save, Clock,
+  Save, Settings2, Check,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { ROUND_META, RoundTypeIcon } from '@/components/shared/RoundIcon';
 import {
-  IntelligencePanel, PanelSection, StatBar, ChecklistItem,
-  CompetencySection, Recommendation, RoleContextSection,
+  IntelligencePanel, PanelSection, CompetencySection,
 } from '@/components/shared/IntelligencePanel';
-import { SkillChip } from '@/components/shared/SkillChip';
+import { AIRoundConfigModal } from '@/components/shared/AIRoundConfigModal';
 import { cn } from '@/lib/utils';
 import type { Round, RoundType } from '@/types/hirenowx';
 
-const ADDABLE_ROUND_TYPES: RoundType[] = ['Screening', 'MCQ', 'Coding', 'AIInterview', 'ManualInterview', 'HR', 'TakeHome', 'FinalApproval'];
+// No "Screening" — handled at Create Job step.
+const ADDABLE_ROUND_TYPES: RoundType[] = [
+  'MCQ', 'Coding', 'AIInterview', 'ManualInterview', 'HR', 'TakeHome', 'FinalApproval',
+];
 
 export default function TemplateBuilder() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -29,29 +31,23 @@ export default function TemplateBuilder() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const [selectedSkills, setSelectedSkills] = useState<Record<string, string[]>>({});
+  const [aiConfigRoundId, setAiConfigRoundId] = useState<string | null>(null);
 
   if (!job) {
     return <AppLayout bare><div className="p-8">Job not found.</div></AppLayout>;
   }
 
-  const rounds = job.rounds;
-  const totalDuration = rounds.reduce((a, r) => a + r.durationMin, 0);
-  const readyCount = rounds.filter(r => r.assessmentStatus === 'ready').length;
-  const assessmentRounds = rounds.filter(r => r.type === 'MCQ' || r.type === 'Coding');
-  const notBuiltAssessments = assessmentRounds.filter(r => r.assessmentStatus === 'not_built');
-  const assessableSkills = Array.from(new Set([
+  // Hide any legacy Screening rounds at the template layer.
+  const rounds = useMemo(() => job.rounds.filter(r => r.type !== 'Screening'), [job.rounds]);
+
+  const assessableSkills = useMemo(() => Array.from(new Set([
     ...job.roleContext.primarySkills,
     ...job.roleContext.secondarySkills,
+    ...(job.roleContext.mustTestTech || []),
     ...job.competencies.map(c => c.name),
-  ]));
+  ])), [job]);
 
-  const readiness = Math.round(
-    (rounds.length >= 3 ? 30 : 10) +
-    (readyCount / Math.max(1, assessmentRounds.length)) * 40 +
-    (rounds.some(r => r.type === 'HR' || r.type === 'FinalApproval') ? 15 : 0) +
-    (totalDuration < 180 ? 15 : 5)
-  );
+  const aiConfigRound = aiConfigRoundId ? rounds.find(r => r.id === aiConfigRoundId) : null;
 
   const toggleExpand = (id: string) => {
     const next = new Set(expanded);
@@ -87,9 +83,10 @@ export default function TemplateBuilder() {
       label: meta.name,
       durationMin: type === 'Coding' ? 90 : type === 'MCQ' ? 30 : 45,
       mandatory: true,
-      autoTrigger: type === 'Screening' || type === 'MCQ' || type === 'Coding',
+      autoTrigger: type === 'MCQ' || type === 'Coding',
       passThreshold: 65,
-      assessmentStatus: (type === 'MCQ' || type === 'Coding') ? 'not_built' : 'ready',
+      assessmentStatus: (type === 'MCQ' || type === 'Coding' || type === 'AIInterview') ? 'not_built' : 'ready',
+      skillsToAssess: assessableSkills.slice(0, 3),
     };
     updateRounds(job.id, [...rounds, newRound]);
     setShowAddMenu(false);
@@ -97,11 +94,7 @@ export default function TemplateBuilder() {
   };
 
   const saveTemplate = () => {
-    toast.success('Job template saved', { description: 'Your round plan is ready to use.' });
-  };
-
-  const updateRoundSkills = (roundId: string, skills: string[]) => {
-    setSelectedSkills(prev => ({ ...prev, [roundId]: skills }));
+    toast.success('Job template saved', { description: 'Round plan is ready to use.' });
   };
 
   return (
@@ -118,12 +111,7 @@ export default function TemplateBuilder() {
             <NavyChip>{job.department}</NavyChip>
             <NavyChip>{job.experienceBand}</NavyChip>
             <NavyChip>{job.workMode}</NavyChip>
-            <NavyChip tone="teal">{rounds.length} rounds · ~{totalDuration} min</NavyChip>
-            {notBuiltAssessments.length > 0 && (
-              <NavyChip tone="default">
-                <AlertCircle className="w-3 h-3" />{notBuiltAssessments.length} assessment{notBuiltAssessments.length > 1 ? 's' : ''} to build
-              </NavyChip>
-            )}
+            <NavyChip tone="teal">{rounds.length} rounds</NavyChip>
           </>
         }
         actions={
@@ -138,38 +126,29 @@ export default function TemplateBuilder() {
         }
       />
 
-      <div className="grid grid-cols-[1fr_340px] gap-6 p-6 max-w-[1440px] mx-auto">
+      <div className="grid grid-cols-[1fr_340px] gap-6 p-6 max-w-[1320px] mx-auto">
         {/* LEFT — round planner */}
         <div className="min-w-0 space-y-5">
-          <div className="flex items-end justify-between">
-            <div>
-              <h1 className="text-[22px] font-bold tracking-tight text-navy">Job Template</h1>
-              <p className="text-[13px] text-muted-foreground mt-0.5">Design the candidate evaluation journey for this role</p>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              <Clock className="w-3.5 h-3.5" />
-              <span>~{totalDuration} min candidate effort</span>
-            </div>
+          <div>
+            <h1 className="text-[22px] font-bold tracking-tight text-navy">Job Template</h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">
+              Define the rounds and the skills each round evaluates. Screening is handled at job creation.
+            </p>
           </div>
 
           {/* AI banner */}
-          {!dismissedBanner && (
+          {!dismissedBanner && rounds.length > 0 && (
             <div className="hnx-card overflow-hidden gradient-ai-banner border-teal/30 animate-slide-up">
               <div className="p-4 flex items-start gap-3">
                 <div className="w-9 h-9 rounded-lg bg-teal flex items-center justify-center shrink-0 shadow-teal-glow">
                   <Sparkles className="w-4 h-4 text-primary-foreground" strokeWidth={2.5} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-navy mb-0.5">AI Recommendation</p>
-                  <p className="text-[12px] text-foreground/80 mb-3">
-                    Based on <span className="font-semibold">{job.title}</span>, we recommend: <span className="text-navy font-semibold">{rounds.map(r => ROUND_META[r.type].name.split(' ')[0]).join(' → ')}</span>
+                  <p className="text-[13px] font-bold text-navy mb-0.5">AI-suggested round flow</p>
+                  <p className="text-[12px] text-foreground/80">
+                    Based on <span className="font-semibold">{job.title}</span>:{' '}
+                    <span className="text-navy font-semibold">{rounds.map(r => ROUND_META[r.type].name.split(' ')[0]).join(' → ')}</span>
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" className="h-7 text-[12px] bg-teal hover:bg-teal-deep">
-                      <Sparkles className="w-3 h-3 mr-1" />Apply Recommended
-                    </Button>
-                    <button className="text-[12px] text-muted-foreground hover:text-foreground font-medium">Start from scratch</button>
-                  </div>
                 </div>
                 <button onClick={() => setDismissedBanner(true)} className="w-7 h-7 rounded-md hover:bg-white/50 flex items-center justify-center shrink-0">
                   <X className="w-3.5 h-3.5 text-muted-foreground" />
@@ -179,7 +158,7 @@ export default function TemplateBuilder() {
           )}
 
           {/* Round cards */}
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {rounds.map((round, i) => (
               <RoundCard
                 key={round.id}
@@ -189,13 +168,12 @@ export default function TemplateBuilder() {
                 onToggleExpand={() => toggleExpand(round.id)}
                 onUpdate={(patch) => updateRound(round.id, patch)}
                 onDelete={() => deleteRound(round.id)}
+                onConfigureAI={() => setAiConfigRoundId(round.id)}
                 onDragStart={() => handleDragStart(round.id)}
                 onDragOver={(e) => handleDragOver(e, round.id)}
                 onDragEnd={() => setDragId(null)}
                 isDragging={dragId === round.id}
-                skills={assessableSkills}
-                selectedSkills={selectedSkills[round.id] || []}
-                onSkillsChange={(skills) => updateRoundSkills(round.id, skills)}
+                allSkills={assessableSkills}
               />
             ))}
           </div>
@@ -205,11 +183,10 @@ export default function TemplateBuilder() {
             {!showAddMenu ? (
               <button
                 onClick={() => setShowAddMenu(true)}
-                className="w-full py-5 rounded-xl border-2 border-dashed border-teal/40 bg-teal-light/20 hover:bg-teal-light/40 hover:border-teal transition-all group"
+                className="w-full py-5 rounded-xl border-2 border-dashed border-teal/40 bg-teal-light/20 hover:bg-teal-light/40 hover:border-teal transition-all"
               >
                 <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-teal-deep">
-                  <Plus className="w-4 h-4" strokeWidth={2.5} />
-                  Add Round
+                  <Plus className="w-4 h-4" strokeWidth={2.5} />Add Round
                 </span>
               </button>
             ) : (
@@ -227,7 +204,7 @@ export default function TemplateBuilder() {
                       <button
                         key={t}
                         onClick={() => addRound(t)}
-                        className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:border-teal hover:bg-teal-light/30 transition-all text-left group"
+                        className="flex items-center gap-2.5 p-2.5 rounded-lg border border-border hover:border-teal hover:bg-teal-light/30 transition-all text-left"
                       >
                         <RoundTypeIcon type={t} size="sm" />
                         <div className="min-w-0">
@@ -243,47 +220,32 @@ export default function TemplateBuilder() {
           </div>
         </div>
 
-        {/* RIGHT — intelligence panel */}
+        {/* RIGHT — intelligence panel: only competency mapping */}
         <IntelligencePanel>
-          <RoleContextSection context={job.roleContext} />
-
-          <PanelSection title="Plan Health" defaultOpen>
-            <StatBar label="Plan Readiness" value={readiness} color={readiness >= 80 ? 'green' : readiness >= 60 ? 'teal' : 'warning'} />
-            <div className="mt-4 space-y-0.5">
-              <ChecklistItem tone="ok">{rounds.length} rounds configured</ChecklistItem>
-              <ChecklistItem tone="ok">Competency coverage: High</ChecklistItem>
-              <ChecklistItem tone={totalDuration < 180 ? 'ok' : 'warn'}>
-                Candidate effort: ~{totalDuration} min {totalDuration < 180 ? '(healthy)' : '(long)'}
-              </ChecklistItem>
-              {notBuiltAssessments.map(r => (
-                <ChecklistItem key={r.id} icon={AlertCircle} tone="warn">
-                  {r.label} assessment not ready
-                </ChecklistItem>
-              ))}
-              <ChecklistItem tone="info" icon={Clock}>
-                {rounds.filter(r => r.autoTrigger).length} rounds auto-triggered
-              </ChecklistItem>
+          <div className="hnx-card p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-teal" strokeWidth={2.5} />
+              <p className="text-[12px] font-bold text-navy">AI Evaluation Foundation</p>
             </div>
-          </PanelSection>
+            <p className="text-[11.5px] text-muted-foreground leading-relaxed">
+              Competencies are mapped from the JD, role level, skills, domain, and experience range.
+              AI uses these competencies to generate role-relevant assessments and interview questions.
+            </p>
+          </div>
 
-          <CompetencySection competencies={job.competencies} />
-
-          <PanelSection title="Recommendations" defaultOpen={false}>
-            <div className="space-y-2">
-              {notBuiltAssessments.length > 0 && (
-                <Recommendation>Complete the {notBuiltAssessments[0].label} to activate auto-triggers.</Recommendation>
-              )}
-              {totalDuration > 180 && (
-                <Recommendation>Total duration is {totalDuration} min — consider shortening to keep candidate drop-off low.</Recommendation>
-              )}
-              {!rounds.some(r => r.type === 'HR') && (
-                <Recommendation>Add an HR round for culture-fit and offer alignment.</Recommendation>
-              )}
-            </div>
-          </PanelSection>
-
+          <CompetencySection competencies={job.competencies} title="Competency Mapping" />
         </IntelligencePanel>
       </div>
+
+      {aiConfigRound && (
+        <AIRoundConfigModal
+          round={aiConfigRound}
+          mode="interview"
+          skills={assessableSkills}
+          onClose={() => setAiConfigRoundId(null)}
+          onSave={(patch) => updateRound(aiConfigRound.id, patch)}
+        />
+      )}
     </AppLayout>
   );
 }
@@ -291,8 +253,8 @@ export default function TemplateBuilder() {
 // ============== Round Card ==============
 
 function RoundCard({
-  round, index, expanded, onToggleExpand, onUpdate, onDelete,
-  onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange,
+  round, index, expanded, onToggleExpand, onUpdate, onDelete, onConfigureAI,
+  onDragStart, onDragOver, onDragEnd, isDragging, allSkills,
 }: {
   round: Round;
   index: number;
@@ -300,23 +262,25 @@ function RoundCard({
   onToggleExpand: () => void;
   onUpdate: (patch: Partial<Round>) => void;
   onDelete: () => void;
+  onConfigureAI: () => void;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
   onDragEnd: () => void;
   isDragging: boolean;
-  skills: string[];
-  selectedSkills: string[];
-  onSkillsChange: (skills: string[]) => void;
+  allSkills: string[];
 }) {
-  const meta = ROUND_META[round.type];
   const isAssessment = round.type === 'MCQ' || round.type === 'Coding';
-  const isReady = round.assessmentStatus === 'ready';
-  const toggleSkill = (skill: string) => {
-    onSkillsChange(selectedSkills.includes(skill)
-      ? selectedSkills.filter(s => s !== skill)
-      : [...selectedSkills, skill]
-    );
-  };
+  const isAI = round.type === 'AIInterview';
+  const status = round.assessmentStatus;
+  const selected = round.skillsToAssess || [];
+  const toggleSkill = (s: string) =>
+    onUpdate({ skillsToAssess: selected.includes(s) ? selected.filter(x => x !== s) : [...selected, s] });
+
+  const statusTone =
+    status === 'ready' ? 'bg-hnxgreen/15 text-hnxgreen-deep border-hnxgreen/30' :
+    status === 'draft' ? 'bg-warning/15 text-warning border-warning/30' :
+    'bg-muted text-muted-foreground border-border';
+  const statusLabel = status === 'ready' ? 'Ready' : status === 'draft' ? 'Draft' : 'Not built';
 
   return (
     <div
@@ -324,26 +288,19 @@ function RoundCard({
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
-      className={cn(
-        'hnx-card-interactive transition-all',
-        isDragging && 'opacity-40 scale-[0.98]',
-      )}
+      className={cn('hnx-card-interactive transition-all', isDragging && 'opacity-40 scale-[0.98]')}
     >
       <div className="flex items-center gap-3 p-4">
-        {/* Drag handle */}
         <button className="text-muted-foreground/40 hover:text-foreground cursor-grab active:cursor-grabbing shrink-0" aria-label="Drag to reorder">
           <GripVertical className="w-4 h-4" />
         </button>
 
-        {/* Order badge */}
         <div className="w-7 h-7 rounded-full bg-navy text-navy-foreground text-[12px] font-bold flex items-center justify-center shrink-0">
           {index + 1}
         </div>
 
-        {/* Icon */}
         <RoundTypeIcon type={round.type} size="md" />
 
-        {/* Label + meta */}
         <div className="flex-1 min-w-0">
           <input
             value={round.label}
@@ -351,17 +308,22 @@ function RoundCard({
             className="text-[14px] font-bold text-navy bg-transparent border-0 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded px-1 -mx-1 w-full max-w-md"
           />
           <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-            {isAssessment && (
-              <span className={cn('inline-flex items-center gap-1 font-semibold', isReady ? 'text-hnxgreen-deep' : 'text-warning')}>
-                <AlertCircle className="w-3 h-3" strokeWidth={2.5} />
-                {isReady ? 'Assessment Ready' : 'Not built'}
-              </span>
-            )}
+            <span>{ROUND_META[round.type].name}</span>
+            {selected.length > 0 && <span>· {selected.length} skill{selected.length > 1 ? 's' : ''} mapped</span>}
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        {(isAssessment || isAI) && (
+          <span className={cn('hnx-badge border', statusTone)}>{statusLabel}</span>
+        )}
+
+        {isAI && (
+          <button onClick={onConfigureAI} className="h-8 px-2.5 rounded-md border border-border hover:border-teal/50 hover:bg-teal-light/30 text-[11px] font-semibold text-teal-deep inline-flex items-center gap-1.5">
+            <Settings2 className="w-3.5 h-3.5" />Configure
+          </button>
+        )}
+
+        <div className="flex items-center gap-1 shrink-0">
           <button onClick={onDelete} className="h-8 w-8 rounded-md hover:bg-destructive/10 hover:text-destructive flex items-center justify-center text-muted-foreground" aria-label="Delete">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -371,26 +333,26 @@ function RoundCard({
         </div>
       </div>
 
-      {/* Expanded details */}
       {expanded && (
         <div className="px-4 pb-4 pt-3 border-t border-border/50 bg-muted/20 animate-fade-in-fast">
           <label className="hnx-label block mb-2">Skills to be assessed</label>
           <div className="rounded-lg border border-border bg-card p-3">
             <div className="flex flex-wrap gap-2">
-              {skills.map(skill => {
-                const active = selectedSkills.includes(skill);
+              {allSkills.map(skill => {
+                const active = selected.includes(skill);
                 return (
                   <button
                     key={skill}
                     type="button"
                     onClick={() => toggleSkill(skill)}
                     className={cn(
-                      'rounded-md border px-2.5 py-1.5 text-[12px] font-semibold transition-all',
+                      'rounded-md border px-2.5 py-1.5 text-[12px] font-semibold transition-all inline-flex items-center gap-1.5',
                       active
                         ? 'border-teal bg-teal-light text-teal-deep'
                         : 'border-border bg-background text-muted-foreground hover:border-teal/50 hover:text-foreground'
                     )}
                   >
+                    {active && <Check className="w-3 h-3" strokeWidth={3} />}
                     {skill}
                   </button>
                 );
