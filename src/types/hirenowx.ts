@@ -65,6 +65,7 @@ export interface Round {
   assessmentStatus: 'not_built' | 'draft' | 'ready';
   assessmentId?: string;
   assessmentMeta?: { count: number; unit: string };
+  skillsToAssess?: string[];
 }
 
 // -------------------- MCQ --------------------
