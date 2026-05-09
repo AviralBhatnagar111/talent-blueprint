@@ -40,11 +40,10 @@ const engineeringCompetencies: Competency[] = [
 ];
 
 const engineeringRounds: Round[] = [
-  { id: 'r1', orderIndex: 0, type: 'Screening', label: 'Initial Screening', purpose: 'Verify basic qualifications and role fit', durationMin: 15, mandatory: true, autoTrigger: true, passThreshold: 60, assessmentStatus: 'ready' },
-  { id: 'r2', orderIndex: 1, type: 'MCQ', label: 'Technical MCQ', purpose: 'Evaluate core technical knowledge', durationMin: 30, mandatory: true, autoTrigger: true, passThreshold: 65, assessmentStatus: 'not_built' },
-  { id: 'r3', orderIndex: 2, type: 'Coding', label: 'Coding Round', purpose: 'Hands-on implementation ability', durationMin: 90, mandatory: true, autoTrigger: true, passThreshold: 60, assessmentStatus: 'not_built' },
-  { id: 'r4', orderIndex: 3, type: 'AIInterview', label: 'AI Technical Interview', purpose: 'Deep dive into system design', durationMin: 45, mandatory: true, autoTrigger: false, passThreshold: 70, assessmentStatus: 'ready' },
-  { id: 'r5', orderIndex: 4, type: 'HR', label: 'HR & Culture Fit', purpose: 'Team fit and compensation', durationMin: 30, mandatory: true, autoTrigger: false, passThreshold: 70, assessmentStatus: 'ready' },
+  { id: 'r2', orderIndex: 0, type: 'MCQ', label: 'Technical MCQ', purpose: 'Evaluate core technical knowledge', durationMin: 30, mandatory: true, autoTrigger: true, passThreshold: 65, assessmentStatus: 'not_built' },
+  { id: 'r3', orderIndex: 1, type: 'Coding', label: 'Coding Round', purpose: 'Hands-on implementation ability', durationMin: 90, mandatory: true, autoTrigger: true, passThreshold: 60, assessmentStatus: 'not_built' },
+  { id: 'r4', orderIndex: 2, type: 'AIInterview', label: 'AI Technical Interview', purpose: 'Deep dive into system design', durationMin: 45, mandatory: true, autoTrigger: false, passThreshold: 70, assessmentStatus: 'not_built' },
+  { id: 'r5', orderIndex: 3, type: 'HR', label: 'HR & Culture Fit', purpose: 'Team fit and compensation', durationMin: 30, mandatory: true, autoTrigger: false, passThreshold: 70, assessmentStatus: 'ready' },
 ];
 
 // ============================================================
@@ -80,11 +79,10 @@ const salesCompetencies: Competency[] = [
 ];
 
 const salesRounds: Round[] = [
-  { id: 'sr1', orderIndex: 0, type: 'Screening', label: 'Recruiter Screen', durationMin: 20, mandatory: true, autoTrigger: true, passThreshold: 60, assessmentStatus: 'ready' },
-  { id: 'sr2', orderIndex: 1, type: 'MCQ', label: 'Sales Scenario Assessment', purpose: 'Evaluate scenario-based judgment', durationMin: 25, mandatory: true, autoTrigger: true, passThreshold: 70, assessmentStatus: 'not_built' },
-  { id: 'sr3', orderIndex: 2, type: 'AIInterview', label: 'AI Sales Interview', durationMin: 30, mandatory: true, autoTrigger: false, passThreshold: 70, assessmentStatus: 'ready' },
-  { id: 'sr4', orderIndex: 3, type: 'ManualInterview', label: 'Hiring Manager Interview', durationMin: 45, mandatory: true, autoTrigger: false, passThreshold: 75, assessmentStatus: 'ready' },
-  { id: 'sr5', orderIndex: 4, type: 'HR', label: 'HR Round', durationMin: 25, mandatory: true, autoTrigger: false, passThreshold: 65, assessmentStatus: 'ready' },
+  { id: 'sr2', orderIndex: 0, type: 'MCQ', label: 'Sales Scenario Assessment', purpose: 'Evaluate scenario-based judgment', durationMin: 25, mandatory: true, autoTrigger: true, passThreshold: 70, assessmentStatus: 'not_built' },
+  { id: 'sr3', orderIndex: 1, type: 'AIInterview', label: 'AI Sales Interview', durationMin: 30, mandatory: true, autoTrigger: false, passThreshold: 70, assessmentStatus: 'not_built' },
+  { id: 'sr4', orderIndex: 2, type: 'ManualInterview', label: 'Hiring Manager Interview', durationMin: 45, mandatory: true, autoTrigger: false, passThreshold: 75, assessmentStatus: 'ready' },
+  { id: 'sr5', orderIndex: 3, type: 'HR', label: 'HR Round', durationMin: 25, mandatory: true, autoTrigger: false, passThreshold: 65, assessmentStatus: 'ready' },
 ];
 
 // ============================================================
