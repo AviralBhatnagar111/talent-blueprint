@@ -6,19 +6,29 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   GripVertical, Plus, Trash2, Sparkles, X, ChevronDown, ChevronRight,
-  AlertCircle, Save, Clock,
+  AlertCircle, Save, Clock, Info,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { ROUND_META, RoundTypeIcon } from '@/components/shared/RoundIcon';
 import {
-  IntelligencePanel, PanelSection, StatBar, ChecklistItem,
-  CompetencySection, Recommendation, RoleContextSection,
+  IntelligencePanel, PanelSection,
+  CompetencySection,
 } from '@/components/shared/IntelligencePanel';
-import { SkillChip } from '@/components/shared/SkillChip';
 import { cn } from '@/lib/utils';
 import type { Round, RoundType } from '@/types/hirenowx';
 
-const ADDABLE_ROUND_TYPES: RoundType[] = ['Screening', 'MCQ', 'Coding', 'AIInterview', 'ManualInterview', 'HR', 'TakeHome', 'FinalApproval'];
+const ADDABLE_ROUND_TYPES: RoundType[] = ['MCQ', 'Coding', 'AIInterview', 'ManualInterview', 'HR', 'TakeHome', 'FinalApproval'];
+
+// Round-aware skill suggestions appended to JD-derived skills
+const ROUND_SKILL_HINTS: Partial<Record<RoundType, string[]>> = {
+  MCQ: ['Frontend Fundamentals', 'Debugging', 'Language Fluency'],
+  Coding: ['DSA', 'Problem Solving', 'API Logic', 'Code Quality'],
+  AIInterview: ['Communication', 'Architecture Thinking', 'Role Depth'],
+  ManualInterview: ['Architecture Thinking', 'Stakeholder Mgmt', 'Role Depth'],
+  HR: ['Culture Fit', 'Motivation', 'Compensation Alignment'],
+  TakeHome: ['Project Execution', 'Code Quality', 'Documentation'],
+  FinalApproval: ['Offer Alignment', 'Reference Check'],
+};
 
 export default function TemplateBuilder() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -29,7 +39,6 @@ export default function TemplateBuilder() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [dragId, setDragId] = useState<string | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
-  const [selectedSkills, setSelectedSkills] = useState<Record<string, string[]>>({});
 
   if (!job) {
     return <AppLayout bare><div className="p-8">Job not found.</div></AppLayout>;
@@ -37,21 +46,13 @@ export default function TemplateBuilder() {
 
   const rounds = job.rounds;
   const totalDuration = rounds.reduce((a, r) => a + r.durationMin, 0);
-  const readyCount = rounds.filter(r => r.assessmentStatus === 'ready').length;
-  const assessmentRounds = rounds.filter(r => r.type === 'MCQ' || r.type === 'Coding');
-  const notBuiltAssessments = assessmentRounds.filter(r => r.assessmentStatus === 'not_built');
-  const assessableSkills = Array.from(new Set([
+  const baseSkills = Array.from(new Set([
     ...job.roleContext.primarySkills,
     ...job.roleContext.secondarySkills,
     ...job.competencies.map(c => c.name),
   ]));
-
-  const readiness = Math.round(
-    (rounds.length >= 3 ? 30 : 10) +
-    (readyCount / Math.max(1, assessmentRounds.length)) * 40 +
-    (rounds.some(r => r.type === 'HR' || r.type === 'FinalApproval') ? 15 : 0) +
-    (totalDuration < 180 ? 15 : 5)
-  );
+  const skillsForRound = (type: RoundType) =>
+    Array.from(new Set([...baseSkills, ...(ROUND_SKILL_HINTS[type] ?? [])]));
 
   const toggleExpand = (id: string) => {
     const next = new Set(expanded);
@@ -100,9 +101,8 @@ export default function TemplateBuilder() {
     toast.success('Job template saved', { description: 'Your round plan is ready to use.' });
   };
 
-  const updateRoundSkills = (roundId: string, skills: string[]) => {
-    setSelectedSkills(prev => ({ ...prev, [roundId]: skills }));
-  };
+  const updateRoundSkills = (roundId: string, skills: string[]) =>
+    updateRound(roundId, { assessedSkills: skills });
 
   return (
     <AppLayout bare>
@@ -119,11 +119,6 @@ export default function TemplateBuilder() {
             <NavyChip>{job.experienceBand}</NavyChip>
             <NavyChip>{job.workMode}</NavyChip>
             <NavyChip tone="teal">{rounds.length} rounds · ~{totalDuration} min</NavyChip>
-            {notBuiltAssessments.length > 0 && (
-              <NavyChip tone="default">
-                <AlertCircle className="w-3 h-3" />{notBuiltAssessments.length} assessment{notBuiltAssessments.length > 1 ? 's' : ''} to build
-              </NavyChip>
-            )}
           </>
         }
         actions={
@@ -138,9 +133,9 @@ export default function TemplateBuilder() {
         }
       />
 
-      <div className="grid grid-cols-[1fr_340px] gap-6 p-6 max-w-[1440px] mx-auto">
+      <div className="grid grid-cols-[1fr_320px] gap-6 p-6 max-w-[1320px] mx-auto">
         {/* LEFT — round planner */}
-        <div className="min-w-0 space-y-5">
+        <div className="min-w-0 space-y-6">
           <div className="flex items-end justify-between">
             <div>
               <h1 className="text-[22px] font-bold tracking-tight text-navy">Job Template</h1>
@@ -193,8 +188,8 @@ export default function TemplateBuilder() {
                 onDragOver={(e) => handleDragOver(e, round.id)}
                 onDragEnd={() => setDragId(null)}
                 isDragging={dragId === round.id}
-                skills={assessableSkills}
-                selectedSkills={selectedSkills[round.id] || []}
+                skills={skillsForRound(round.type)}
+                selectedSkills={round.assessedSkills ?? []}
                 onSkillsChange={(skills) => updateRoundSkills(round.id, skills)}
               />
             ))}
@@ -245,43 +240,18 @@ export default function TemplateBuilder() {
 
         {/* RIGHT — intelligence panel */}
         <IntelligencePanel>
-          <RoleContextSection context={job.roleContext} />
-
-          <PanelSection title="Plan Health" defaultOpen>
-            <StatBar label="Plan Readiness" value={readiness} color={readiness >= 80 ? 'green' : readiness >= 60 ? 'teal' : 'warning'} />
-            <div className="mt-4 space-y-0.5">
-              <ChecklistItem tone="ok">{rounds.length} rounds configured</ChecklistItem>
-              <ChecklistItem tone="ok">Competency coverage: High</ChecklistItem>
-              <ChecklistItem tone={totalDuration < 180 ? 'ok' : 'warn'}>
-                Candidate effort: ~{totalDuration} min {totalDuration < 180 ? '(healthy)' : '(long)'}
-              </ChecklistItem>
-              {notBuiltAssessments.map(r => (
-                <ChecklistItem key={r.id} icon={AlertCircle} tone="warn">
-                  {r.label} assessment not ready
-                </ChecklistItem>
-              ))}
-              <ChecklistItem tone="info" icon={Clock}>
-                {rounds.filter(r => r.autoTrigger).length} rounds auto-triggered
-              </ChecklistItem>
+          <div className="hnx-card p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-md bg-teal-light flex items-center justify-center">
+                <Info className="w-3.5 h-3.5 text-teal-deep" strokeWidth={2.5} />
+              </div>
+              <h3 className="hnx-section-title">AI Evaluation Foundation</h3>
             </div>
-          </PanelSection>
-
-          <CompetencySection competencies={job.competencies} />
-
-          <PanelSection title="Recommendations" defaultOpen={false}>
-            <div className="space-y-2">
-              {notBuiltAssessments.length > 0 && (
-                <Recommendation>Complete the {notBuiltAssessments[0].label} to activate auto-triggers.</Recommendation>
-              )}
-              {totalDuration > 180 && (
-                <Recommendation>Total duration is {totalDuration} min — consider shortening to keep candidate drop-off low.</Recommendation>
-              )}
-              {!rounds.some(r => r.type === 'HR') && (
-                <Recommendation>Add an HR round for culture-fit and offer alignment.</Recommendation>
-              )}
-            </div>
-          </PanelSection>
-
+            <p className="text-[12px] text-foreground/70 leading-relaxed">
+              Competencies are mapped from the JD, role level, skills, domain, and experience range. AI will use these competencies to generate role-relevant assessments and interview questions.
+            </p>
+          </div>
+          <CompetencySection competencies={job.competencies} title="Competency Mapping" />
         </IntelligencePanel>
       </div>
     </AppLayout>
