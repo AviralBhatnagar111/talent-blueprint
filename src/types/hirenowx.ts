@@ -65,6 +65,25 @@ export interface Round {
   assessmentStatus: 'not_built' | 'draft' | 'ready';
   assessmentId?: string;
   assessmentMeta?: { count: number; unit: string };
+  assessedSkills?: string[];
+  aiConfig?: AIRoundConfig;
+}
+
+export interface AIRoundConfig {
+  kind: 'AIInterview' | 'AICoding';
+  name?: string;
+  skills: string[];
+  experienceLevel?: string;
+  durationMin: number;
+  questionStyle?: 'Technical' | 'Behavioral' | 'Scenario' | 'Mixed';
+  problemStyle?: 'Debugging' | 'Implementation' | 'LiveReasoning' | 'CodeExplanation' | 'Mixed';
+  difficulty?: Difficulty;
+  language?: string;
+  codingLanguage?: string;
+  proctoring?: 'Off' | 'Standard' | 'Strict';
+  threshold?: number;
+  candidateInstructions?: string;
+  rubric?: string;
 }
 
 // -------------------- MCQ --------------------
