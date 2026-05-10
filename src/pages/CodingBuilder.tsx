@@ -107,6 +107,7 @@ export default function CodingBuilder() {
   };
 
   const aiCount = problems.filter(p => sourceOf(p) === 'ai').length;
+  const uploadCount = problems.filter(p => sourceOf(p) === 'upload').length;
   const manualCount = problems.filter(p => sourceOf(p) === 'manual').length;
   const selectedPs = problems.filter(p => p.status === 'approved');
   const selectedCount = selectedPs.length;
