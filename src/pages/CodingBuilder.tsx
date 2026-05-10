@@ -608,6 +608,7 @@ export default function CodingBuilder() {
       </div>
 
       {showManualAdd && <ManualCodingModal onClose={() => setShowManualAdd(false)} onAdd={addManualProblem} competencyName={job.competencies[0]?.name || 'Technical Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} languages={blueprint.languages} />}
+      {showBulkImport && <BulkImportProblemsModal onClose={() => setShowBulkImport(false)} onImport={importProblems} competencyName={job.competencies[0]?.name || 'Technical Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} languages={blueprint.languages} />}
       {showFinalProblems && <FinalProblemsOverlay problems={selectedPs} onClose={() => setShowFinalProblems(false)} />}
       {showSaveConfirm && <SaveConfirmOverlay onClose={() => setShowSaveConfirm(false)} onConfirm={save} />}
     </AppLayout>
