@@ -254,12 +254,16 @@ export default function CodingBuilder() {
                     </div>
                     <div>
                       <span className="hnx-label block mb-1.5">Skills Mapped to Round</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(round.assessedSkills && round.assessedSkills.length > 0
-                          ? round.assessedSkills
-                          : context.primarySkills
-                        ).map(s => <SkillChip key={s} label={s} variant="navy" size="sm" />)}
-                      </div>
+                      <SkillsEditor
+                        value={roundSkills}
+                        suggestions={Array.from(new Set([
+                          ...context.primarySkills,
+                          ...context.secondarySkills,
+                          ...(context.mustTestTech ?? []),
+                          ...job.competencies.map(c => c.name),
+                        ]))}
+                        onChange={setRoundSkills}
+                      />
                     </div>
                   </div>
                 </div>
