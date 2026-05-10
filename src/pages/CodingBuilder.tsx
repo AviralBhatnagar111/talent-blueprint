@@ -328,7 +328,10 @@ export default function CodingBuilder() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-1">
+              <div className="flex justify-between items-center pt-1">
+                <Button size="lg" variant="outline" className="font-semibold" onClick={() => setShowBulkImport(true)}>
+                  <Upload className="w-4 h-4 mr-2" />Upload Problems
+                </Button>
                 <Button size="lg" className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold shadow-green-glow" onClick={handleGenerate} disabled={!blueprintValid}>
                   <Sparkles className="w-4 h-4 mr-2" />Generate Problems
                 </Button>
