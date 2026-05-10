@@ -361,6 +361,9 @@ export default function CodingBuilder() {
                     <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={approveAllVisible} disabled={visibleProblems.length === 0}>
                       Approve All
                     </Button>
+                    <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setShowBulkImport(true)}>
+                      <Upload className="w-3.5 h-3.5 mr-1" />Upload CSV
+                    </Button>
                     <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
                       <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Problem Manually
                     </Button>
@@ -368,6 +371,7 @@ export default function CodingBuilder() {
                 </div>
                 <div className="flex items-center gap-2 border-t pt-3 flex-wrap">
                   <PoolTabButton active={poolTab === 'ai'} onClick={() => setPoolTab('ai')} label="AI Generated" count={aiCount} />
+                  <PoolTabButton active={poolTab === 'upload'} onClick={() => setPoolTab('upload')} label="Bulk Upload" count={uploadCount} />
                   <PoolTabButton active={poolTab === 'manual'} onClick={() => setPoolTab('manual')} label="Manual" count={manualCount} />
                   <PoolTabButton active={poolTab === 'all'} onClick={() => setPoolTab('all')} label="Total Pool" count={problems.length} />
                   <PoolTabButton active={poolTab === 'selected'} onClick={() => setPoolTab('selected')} label="Selected" count={selectedCount} tone="green" />
