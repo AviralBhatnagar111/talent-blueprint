@@ -814,9 +814,10 @@ function Stat({ label, value, tone = 'default' }: { label: string; value: string
   );
 }
 
-function SourceTile({ label, count, tone }: { label: string; count: number; tone: 'teal' | 'warning' }) {
+function SourceTile({ label, count, tone }: { label: string; count: number; tone: 'teal' | 'primary' | 'warning' }) {
   const tones = {
     teal: 'bg-teal-light text-teal-deep border-teal/30',
+    primary: 'bg-blue-light text-primary border-primary/20',
     warning: 'bg-warning-light text-warning border-warning/20',
   };
   return (
