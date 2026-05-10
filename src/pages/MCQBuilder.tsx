@@ -975,3 +975,53 @@ function SummaryRow({ label, value, tone }: { label: string; value: string; tone
     </div>
   );
 }
+
+function SkillsEditor({ value, suggestions, onChange }: { value: string[]; suggestions: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const remove = (s: string) => onChange(value.filter(v => v !== s));
+  const add = (s: string) => {
+    const t = s.trim();
+    if (!t || value.includes(t)) return;
+    onChange([...value, t]);
+  };
+  const unselected = suggestions.filter(s => !value.includes(s));
+  return (
+    <div className="rounded-lg border border-border bg-card p-2.5 space-y-2">
+      <div className="flex flex-wrap gap-1.5 min-h-7">
+        {value.length === 0 && <span className="text-[11px] text-muted-foreground py-0.5">No skills selected yet.</span>}
+        {value.map(s => (
+          <SkillChip key={s} label={s} variant="navy" size="sm" removable onRemove={() => remove(s)} />
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(draft); setDraft(''); } }}
+          placeholder="Add custom skill…"
+          className="hnx-input flex-1 h-8 text-[12px]"
+        />
+        <button
+          type="button"
+          onClick={() => { add(draft); setDraft(''); }}
+          className="h-8 w-8 rounded-md bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {unselected.length > 0 && (
+        <div className="pt-1.5 border-t border-border/60">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Suggestions</p>
+          <div className="flex flex-wrap gap-1">
+            {unselected.map(s => (
+              <button key={s} type="button" onClick={() => add(s)}
+                className="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border text-muted-foreground hover:border-teal hover:text-teal-deep hover:bg-teal-light/40 transition-colors">
+                + {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
