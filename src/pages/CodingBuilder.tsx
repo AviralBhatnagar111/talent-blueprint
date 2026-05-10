@@ -65,6 +65,12 @@ export default function CodingBuilder() {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [poolTab, setPoolTab] = useState<PoolTab>('all');
   const [finalDuration, setFinalDuration] = useState<number | null>(null);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [roundSkills, setRoundSkills] = useState<string[]>(
+    round?.assessedSkills && round.assessedSkills.length > 0
+      ? round.assessedSkills
+      : (job?.roleContext.primarySkills ?? []),
+  );
 
   if (!job || !round || !context) {
     return <AppLayout bare><div className="p-8">Not found. <Link to="/jobs" className="text-primary">Back to Jobs</Link></div></AppLayout>;
