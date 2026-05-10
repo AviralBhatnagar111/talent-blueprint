@@ -547,11 +547,11 @@ export default function CodingBuilder() {
               <PanelSection title="Pool Stats" defaultOpen>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <Stat label="AI" value={`${aiCount}`} />
+                  <Stat label="Uploaded" value={`${uploadCount}`} />
                   <Stat label="Manual" value={`${manualCount}`} />
                   <Stat label="Total" value={`${problems.length}`} />
                   <Stat label="Selected" value={`${selectedCount}`} tone="green" />
                   <Stat label="Target" value={`${target}`} />
-                  <Stat label="Tests" value={`${blueprint.testCases.visible}+${blueprint.testCases.hidden}`} />
                 </div>
               </PanelSection>
               <PanelSection title="Difficulty Distribution">
@@ -560,6 +560,25 @@ export default function CodingBuilder() {
                   medium={Math.round((difficulty.medium / Math.max(1, problems.length)) * 100)}
                   hard={Math.round((difficulty.hard / Math.max(1, problems.length)) * 100)}
                 />
+              </PanelSection>
+              <PanelSection title="Competency Coverage" defaultOpen>
+                <p className="text-[11px] text-muted-foreground mb-2 leading-relaxed">
+                  Mapped from JD & assessment scope. Counts update live as you select problems.
+                </p>
+                <div className="space-y-1.5">
+                  {job.competencies.map(c => {
+                    const live = competencyCoverage.find(x => x.name === c.name)?.count ?? 0;
+                    return (
+                      <div key={c.id} className="flex items-center gap-2 text-[12px]">
+                        <span className={cn('w-1 h-3 rounded-full',
+                          c.category === 'Technical' ? 'bg-primary' : c.category === 'Domain' ? 'bg-teal' : 'bg-hnxgreen-deep')} />
+                        <span className="flex-1 truncate">{c.name}</span>
+                        <span className={cn('text-[10px] tabular-nums font-semibold px-1.5 py-0.5 rounded',
+                          live > 0 ? 'bg-teal-light text-teal-deep' : 'bg-muted text-muted-foreground')}>{live}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </PanelSection>
               <PanelSection title="Language Coverage">
                 <div className="space-y-1.5">
