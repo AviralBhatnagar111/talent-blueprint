@@ -129,6 +129,20 @@ export default function CodingBuilder() {
   const computedSuggested = suggestedDuration(selectedPs);
   const effectiveDuration = finalDuration ?? computedSuggested;
 
+  const importProblems = (items: CodingProblem[]) => {
+    setProblems(ps => [...items, ...ps]);
+    setStep(2);
+    setPoolTab('upload');
+    setShowBulkImport(false);
+    toast.success('Problems imported', { description: `${items.length} problems added to the pool` });
+  };
+
+  const competencyCoverage = useMemo(() => {
+    const m = new Map<string, number>();
+    selectedPs.forEach(p => m.set(p.competencyName, (m.get(p.competencyName) ?? 0) + 1));
+    return Array.from(m.entries()).map(([name, count]) => ({ name, count }));
+  }, [selectedPs]);
+
   const toggleLanguage = (l: CodingLanguage) =>
     setBlueprint({ ...blueprint, languages: blueprint.languages.includes(l) ? blueprint.languages.filter(x => x !== l) : [...blueprint.languages, l] });
   const toggleType = (t: CodingProblemType) =>
