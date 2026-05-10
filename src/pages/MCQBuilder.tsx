@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Pencil, Check, X,
   Upload, FilePlus2, Shield, CheckCircle2, Eye,
-  Minus, Plus, ListChecks, Info, Brain,
+  Minus, Plus, ListChecks, Info, Brain, Plus as PlusIcon,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
@@ -71,6 +71,11 @@ export default function MCQBuilder() {
   const [assessmentName, setAssessmentName] = useState('Technical MCQ — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
   const [finalDuration, setFinalDuration] = useState<number | null>(null);
+  const [roundSkills, setRoundSkills] = useState<string[]>(
+    round?.assessedSkills && round.assessedSkills.length > 0
+      ? round.assessedSkills
+      : (job?.roleContext.primarySkills ?? []),
+  );
 
   if (!job || !round || !context) {
     return <AppLayout bare><div className="p-8">Not found. <Link to="/jobs" className="text-primary">Back to Jobs</Link></div></AppLayout>;
@@ -312,12 +317,15 @@ export default function MCQBuilder() {
                     </div>
                     <div>
                       <span className="hnx-label block mb-1.5">Skills Mapped to Round</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(round.assessedSkills && round.assessedSkills.length > 0
-                          ? round.assessedSkills
-                          : context.primarySkills
-                        ).map(s => <SkillChip key={s} label={s} variant="navy" size="sm" />)}
-                      </div>
+                      <SkillsEditor
+                        value={roundSkills}
+                        suggestions={Array.from(new Set([
+                          ...context.primarySkills,
+                          ...context.secondarySkills,
+                          ...job.competencies.map(c => c.name),
+                        ]))}
+                        onChange={setRoundSkills}
+                      />
                     </div>
                   </div>
 
@@ -570,19 +578,24 @@ export default function MCQBuilder() {
                   hard={Math.round((difficulty.hard / Math.max(1, questions.length)) * 100)}
                 />
               </PanelSection>
-              <PanelSection title="Competency Coverage">
-                {competencyCoverage.length === 0 ? (
-                  <p className="text-[11.5px] text-muted-foreground">Approve questions to see live coverage.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {competencyCoverage.map(c => (
-                      <div key={c.name} className="flex items-center gap-2 text-[12px]">
+              <PanelSection title="Competency Coverage" defaultOpen>
+                <p className="text-[11px] text-muted-foreground mb-2 leading-relaxed">
+                  Mapped from JD & assessment scope. Counts update live as you select questions.
+                </p>
+                <div className="space-y-1.5">
+                  {job.competencies.map(c => {
+                    const live = competencyCoverage.find(x => x.name === c.name)?.count ?? 0;
+                    return (
+                      <div key={c.id} className="flex items-center gap-2 text-[12px]">
+                        <span className={cn('w-1 h-3 rounded-full',
+                          c.category === 'Technical' ? 'bg-primary' : c.category === 'Domain' ? 'bg-teal' : 'bg-hnxgreen-deep')} />
                         <span className="flex-1 truncate">{c.name}</span>
-                        <span className="text-muted-foreground tabular-nums">{c.count}</span>
+                        <span className={cn('text-[10px] tabular-nums font-semibold px-1.5 py-0.5 rounded',
+                          live > 0 ? 'bg-teal-light text-teal-deep' : 'bg-muted text-muted-foreground')}>{live}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </PanelSection>
             </>
           )}
