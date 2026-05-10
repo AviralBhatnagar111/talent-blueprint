@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Check, X,
   Shield, CheckCircle2, Minus, Plus, Code2, Terminal, FileCode, Play,
-  Eye, FilePlus2, Info, Brain,
+  Eye, FilePlus2, Info, Brain, Upload,
 } from 'lucide-react';
 import { ContextTopBar } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
@@ -29,11 +29,13 @@ const STEPS = [
 const ALL_LANGUAGES: CodingLanguage[] = ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'Go', 'SQL'];
 const ALL_PROBLEM_TYPES: CodingProblemType[] = ['Algorithmic', 'Implementation', 'Debugging', 'OutputPrediction', 'Refactoring', 'APILogic', 'FrontendUI', 'SQL', 'SystemDesignLite', 'RealWorld'];
 
-type PoolTab = 'ai' | 'manual' | 'all' | 'selected';
-type Source = 'ai' | 'manual';
-const sourceOf = (p: CodingProblem): Source => p.id.startsWith('manual-') ? 'manual' : 'ai';
+type PoolTab = 'ai' | 'upload' | 'manual' | 'all' | 'selected';
+type Source = 'ai' | 'upload' | 'manual';
+const sourceOf = (p: CodingProblem): Source =>
+  p.id.startsWith('manual-') ? 'manual' : p.id.startsWith('upload-') ? 'upload' : 'ai';
 const sourceMeta: Record<Source, { label: string; tone: string }> = {
   ai: { label: 'AI Generated', tone: 'bg-teal-light text-teal-deep border-teal/30' },
+  upload: { label: 'Bulk Uploaded', tone: 'bg-blue-light text-primary border-primary/20' },
   manual: { label: 'Manually Added', tone: 'bg-warning-light text-warning border-warning/20' },
 };
 
