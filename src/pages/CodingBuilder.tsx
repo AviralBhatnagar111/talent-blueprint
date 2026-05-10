@@ -856,3 +856,125 @@ function SummaryRow({ label, value, tone }: { label: string; value: string; tone
     </div>
   );
 }
+
+function SkillsEditor({ value, suggestions, onChange }: { value: string[]; suggestions: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const remove = (s: string) => onChange(value.filter(v => v !== s));
+  const add = (s: string) => {
+    const t = s.trim();
+    if (!t || value.includes(t)) return;
+    onChange([...value, t]);
+  };
+  const unselected = suggestions.filter(s => !value.includes(s));
+  return (
+    <div className="rounded-lg border border-border bg-card p-2.5 space-y-2">
+      <div className="flex flex-wrap gap-1.5 min-h-7">
+        {value.length === 0 && <span className="text-[11px] text-muted-foreground py-0.5">No skills selected yet.</span>}
+        {value.map(s => (
+          <SkillChip key={s} label={s} variant="navy" size="sm" removable onRemove={() => remove(s)} />
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(draft); setDraft(''); } }}
+          placeholder="Add custom skill…"
+          className="hnx-input flex-1 h-8 text-[12px]"
+        />
+        <button
+          type="button"
+          onClick={() => { add(draft); setDraft(''); }}
+          className="h-8 w-8 rounded-md bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {unselected.length > 0 && (
+        <div className="pt-1.5 border-t border-border/60">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Suggestions</p>
+          <div className="flex flex-wrap gap-1">
+            {unselected.map(s => (
+              <button key={s} type="button" onClick={() => add(s)}
+                className="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border text-muted-foreground hover:border-teal hover:text-teal-deep hover:bg-teal-light/40 transition-colors">
+                + {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BulkImportProblemsModal({ onClose, onImport, competencyName, skillTag, languages }: {
+  onClose: () => void; onImport: (p: CodingProblem[]) => void;
+  competencyName: string; skillTag: string; languages: CodingLanguage[];
+}) {
+  const [summary, setSummary] = useState<{ total: number; valid: number; invalid: number } | null>(null);
+
+  const parseCsv = (text: string): CodingProblem[] => {
+    const rows = text.split(/\r?\n/).filter(Boolean);
+    if (rows.length === 0) return [];
+    const lines = rows.slice(1); // assume header
+    let invalid = 0;
+    const out: CodingProblem[] = [];
+    lines.forEach((line, idx) => {
+      const cols = line.match(/("[^"]*"|[^,]+)/g)?.map(c => c.replace(/^"|"$/g, '').trim()) || [];
+      // columns: title, summary, statement, input, output, constraints, difficulty, type, hiddenCount, skill
+      if (!cols[0] || !cols[2]) { invalid++; return; }
+      const diff = (cols[6] as CodingProblem['difficulty']) || 'Medium';
+      out.push({
+        id: `upload-${Date.now()}-${idx}`,
+        title: cols[0],
+        summary: cols[1] || cols[0],
+        fullStatement: cols[2],
+        ioFormat: { input: cols[3] || 'Standard input', output: cols[4] || 'Expected output' },
+        constraints: (cols[5] || '').split('|').filter(Boolean),
+        sampleCases: [{ input: 'sample input', output: 'sample output', explanation: 'Validates the core behavior.' }],
+        hiddenCaseCount: Number(cols[8]) || 6,
+        expectedComplexity: { time: 'O(n)', space: 'O(1)' },
+        scoring: { maxPoints: 100, perTestCase: 10 },
+        competencyId: 'imported', competencyName: cols[9] || competencyName, skillTag: cols[9] || skillTag,
+        difficulty: diff,
+        problemType: ((cols[7] as CodingProblemType) || 'Implementation'),
+        languagesSupported: languages,
+        estimatedSolveTimeMin: diff === 'Hard' ? 30 : diff === 'Medium' ? 20 : 12,
+        rationale: 'Imported via CSV.', status: 'pending', freshness: 'new', highRoleFit: true,
+      });
+    });
+    setSummary({ total: lines.length, valid: out.length, invalid });
+    return out;
+  };
+
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onImport(parseCsv(String(reader.result || '')));
+    reader.readAsText(file);
+  };
+
+  return (
+    <ModalShell title="Bulk Upload Coding Problems" onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-[12px] text-muted-foreground">
+          CSV columns: <span className="font-mono">title, summary, statement, input, output, constraints (use | to separate), difficulty, type, hiddenCount, skill</span>
+        </p>
+        <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-5 text-[13px] font-semibold text-primary cursor-pointer">
+          <Upload className="w-4 h-4" />Upload CSV file
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        </label>
+        {summary && (
+          <div className="rounded-md border bg-muted/30 p-3 text-[12px] grid grid-cols-3 gap-2">
+            <div><p className="text-muted-foreground">Total</p><p className="font-bold text-navy tabular-nums">{summary.total}</p></div>
+            <div><p className="text-muted-foreground">Valid</p><p className="font-bold text-hnxgreen-deep tabular-nums">{summary.valid}</p></div>
+            <div><p className="text-muted-foreground">Invalid</p><p className="font-bold text-destructive tabular-nums">{summary.invalid}</p></div>
+          </div>
+        )}
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Imported problems land in the <span className="font-semibold text-foreground">Bulk Upload</span> tab and can be reviewed alongside AI-generated and manual problems.
+        </p>
+      </div>
+    </ModalShell>
+  );
+}
