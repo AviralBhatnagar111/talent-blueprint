@@ -71,6 +71,11 @@ export default function MCQBuilder() {
   const [assessmentName, setAssessmentName] = useState('Technical MCQ — ' + (job?.title || ''));
   const [passThreshold, setPassThreshold] = useState(60);
   const [finalDuration, setFinalDuration] = useState<number | null>(null);
+  const [roundSkills, setRoundSkills] = useState<string[]>(
+    round?.assessedSkills && round.assessedSkills.length > 0
+      ? round.assessedSkills
+      : (job?.roleContext.primarySkills ?? []),
+  );
 
   if (!job || !round || !context) {
     return <AppLayout bare><div className="p-8">Not found. <Link to="/jobs" className="text-primary">Back to Jobs</Link></div></AppLayout>;
@@ -312,12 +317,15 @@ export default function MCQBuilder() {
                     </div>
                     <div>
                       <span className="hnx-label block mb-1.5">Skills Mapped to Round</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(round.assessedSkills && round.assessedSkills.length > 0
-                          ? round.assessedSkills
-                          : context.primarySkills
-                        ).map(s => <SkillChip key={s} label={s} variant="navy" size="sm" />)}
-                      </div>
+                      <SkillsEditor
+                        value={roundSkills}
+                        suggestions={Array.from(new Set([
+                          ...context.primarySkills,
+                          ...context.secondarySkills,
+                          ...job.competencies.map(c => c.name),
+                        ]))}
+                        onChange={setRoundSkills}
+                      />
                     </div>
                   </div>
 
@@ -570,19 +578,24 @@ export default function MCQBuilder() {
                   hard={Math.round((difficulty.hard / Math.max(1, questions.length)) * 100)}
                 />
               </PanelSection>
-              <PanelSection title="Competency Coverage">
-                {competencyCoverage.length === 0 ? (
-                  <p className="text-[11.5px] text-muted-foreground">Approve questions to see live coverage.</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {competencyCoverage.map(c => (
-                      <div key={c.name} className="flex items-center gap-2 text-[12px]">
+              <PanelSection title="Competency Coverage" defaultOpen>
+                <p className="text-[11px] text-muted-foreground mb-2 leading-relaxed">
+                  Mapped from JD & assessment scope. Counts update live as you select questions.
+                </p>
+                <div className="space-y-1.5">
+                  {job.competencies.map(c => {
+                    const live = competencyCoverage.find(x => x.name === c.name)?.count ?? 0;
+                    return (
+                      <div key={c.id} className="flex items-center gap-2 text-[12px]">
+                        <span className={cn('w-1 h-3 rounded-full',
+                          c.category === 'Technical' ? 'bg-primary' : c.category === 'Domain' ? 'bg-teal' : 'bg-hnxgreen-deep')} />
                         <span className="flex-1 truncate">{c.name}</span>
-                        <span className="text-muted-foreground tabular-nums">{c.count}</span>
+                        <span className={cn('text-[10px] tabular-nums font-semibold px-1.5 py-0.5 rounded',
+                          live > 0 ? 'bg-teal-light text-teal-deep' : 'bg-muted text-muted-foreground')}>{live}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
+                    );
+                  })}
+                </div>
               </PanelSection>
             </>
           )}
@@ -959,6 +972,56 @@ function SummaryRow({ label, value, tone }: { label: string; value: string; tone
     <div className="flex justify-between items-center text-[12px]">
       <span className="text-muted-foreground">{label}</span>
       <span className={cn('font-semibold', tone === 'green' ? 'text-hnxgreen-deep' : 'text-foreground')}>{value}</span>
+    </div>
+  );
+}
+
+function SkillsEditor({ value, suggestions, onChange }: { value: string[]; suggestions: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const remove = (s: string) => onChange(value.filter(v => v !== s));
+  const add = (s: string) => {
+    const t = s.trim();
+    if (!t || value.includes(t)) return;
+    onChange([...value, t]);
+  };
+  const unselected = suggestions.filter(s => !value.includes(s));
+  return (
+    <div className="rounded-lg border border-border bg-card p-2.5 space-y-2">
+      <div className="flex flex-wrap gap-1.5 min-h-7">
+        {value.length === 0 && <span className="text-[11px] text-muted-foreground py-0.5">No skills selected yet.</span>}
+        {value.map(s => (
+          <SkillChip key={s} label={s} variant="navy" size="sm" removable onRemove={() => remove(s)} />
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(draft); setDraft(''); } }}
+          placeholder="Add custom skill…"
+          className="hnx-input flex-1 h-8 text-[12px]"
+        />
+        <button
+          type="button"
+          onClick={() => { add(draft); setDraft(''); }}
+          className="h-8 w-8 rounded-md bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {unselected.length > 0 && (
+        <div className="pt-1.5 border-t border-border/60">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Suggestions</p>
+          <div className="flex flex-wrap gap-1">
+            {unselected.map(s => (
+              <button key={s} type="button" onClick={() => add(s)}
+                className="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border text-muted-foreground hover:border-teal hover:text-teal-deep hover:bg-teal-light/40 transition-colors">
+                + {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

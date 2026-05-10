@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   GripVertical, Plus, Trash2, Sparkles, X, ChevronDown, ChevronRight,
-  AlertCircle, Save, Clock, Info,
+  AlertCircle, Save, Clock, Info, Check,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { ROUND_META, RoundTypeIcon } from '@/components/shared/RoundIcon';
@@ -345,30 +345,68 @@ function RoundCard({
       {expanded && (
         <div className="px-4 pb-4 pt-3 border-t border-border/50 bg-muted/20 animate-fade-in-fast">
           <label className="hnx-label block mb-2">Skills to be assessed</label>
-          <div className="rounded-lg border border-border bg-card p-3">
-            <div className="flex flex-wrap gap-2">
-              {skills.map(skill => {
-                const active = selectedSkills.includes(skill);
-                return (
-                  <button
-                    key={skill}
-                    type="button"
-                    onClick={() => toggleSkill(skill)}
-                    className={cn(
-                      'rounded-md border px-2.5 py-1.5 text-[12px] font-semibold transition-all',
-                      active
-                        ? 'border-teal bg-teal-light text-teal-deep'
-                        : 'border-border bg-background text-muted-foreground hover:border-teal/50 hover:text-foreground'
-                    )}
-                  >
-                    {skill}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <RoundSkillsField
+            suggestions={skills}
+            selected={selectedSkills}
+            onToggle={toggleSkill}
+            onAddCustom={(s) => onSkillsChange(Array.from(new Set([...selectedSkills, s])))}
+          />
         </div>
       )}
+    </div>
+  );
+}
+
+function RoundSkillsField({ suggestions, selected, onToggle, onAddCustom }: {
+  suggestions: string[]; selected: string[]; onToggle: (s: string) => void; onAddCustom: (s: string) => void;
+}) {
+  const [draft, setDraft] = useState('');
+  const allKnown = Array.from(new Set([...suggestions, ...selected]));
+  const submit = () => {
+    const t = draft.trim();
+    if (!t) return;
+    onAddCustom(t);
+    setDraft('');
+  };
+  return (
+    <div className="rounded-lg border border-border bg-card p-3 space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {allKnown.map(skill => {
+          const active = selected.includes(skill);
+          return (
+            <button
+              key={skill}
+              type="button"
+              onClick={() => onToggle(skill)}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-[12px] font-semibold transition-all',
+                active
+                  ? 'border-teal bg-teal-light text-teal-deep'
+                  : 'border-border bg-background text-muted-foreground hover:border-teal/50 hover:text-foreground'
+              )}
+            >
+              {active && <Check className="w-3 h-3" strokeWidth={3} />}
+              {skill}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-1.5 pt-2 border-t border-border/60">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } }}
+          placeholder="Add a custom skill…"
+          className="hnx-input flex-1 h-8 text-[12px]"
+        />
+        <button
+          type="button"
+          onClick={submit}
+          className="h-8 px-3 rounded-md bg-primary/10 text-primary hover:bg-primary/20 text-[12px] font-semibold inline-flex items-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" />Add
+        </button>
+      </div>
     </div>
   );
 }

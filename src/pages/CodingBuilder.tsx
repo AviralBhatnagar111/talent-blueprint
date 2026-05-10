@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Check, X,
   Shield, CheckCircle2, Minus, Plus, Code2, Terminal, FileCode, Play,
-  Eye, FilePlus2, Info, Brain,
+  Eye, FilePlus2, Info, Brain, Upload,
 } from 'lucide-react';
 import { ContextTopBar } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
@@ -29,11 +29,13 @@ const STEPS = [
 const ALL_LANGUAGES: CodingLanguage[] = ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'Go', 'SQL'];
 const ALL_PROBLEM_TYPES: CodingProblemType[] = ['Algorithmic', 'Implementation', 'Debugging', 'OutputPrediction', 'Refactoring', 'APILogic', 'FrontendUI', 'SQL', 'SystemDesignLite', 'RealWorld'];
 
-type PoolTab = 'ai' | 'manual' | 'all' | 'selected';
-type Source = 'ai' | 'manual';
-const sourceOf = (p: CodingProblem): Source => p.id.startsWith('manual-') ? 'manual' : 'ai';
+type PoolTab = 'ai' | 'upload' | 'manual' | 'all' | 'selected';
+type Source = 'ai' | 'upload' | 'manual';
+const sourceOf = (p: CodingProblem): Source =>
+  p.id.startsWith('manual-') ? 'manual' : p.id.startsWith('upload-') ? 'upload' : 'ai';
 const sourceMeta: Record<Source, { label: string; tone: string }> = {
   ai: { label: 'AI Generated', tone: 'bg-teal-light text-teal-deep border-teal/30' },
+  upload: { label: 'Bulk Uploaded', tone: 'bg-blue-light text-primary border-primary/20' },
   manual: { label: 'Manually Added', tone: 'bg-warning-light text-warning border-warning/20' },
 };
 
@@ -63,6 +65,12 @@ export default function CodingBuilder() {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [poolTab, setPoolTab] = useState<PoolTab>('all');
   const [finalDuration, setFinalDuration] = useState<number | null>(null);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [roundSkills, setRoundSkills] = useState<string[]>(
+    round?.assessedSkills && round.assessedSkills.length > 0
+      ? round.assessedSkills
+      : (job?.roleContext.primarySkills ?? []),
+  );
 
   if (!job || !round || !context) {
     return <AppLayout bare><div className="p-8">Not found. <Link to="/jobs" className="text-primary">Back to Jobs</Link></div></AppLayout>;
@@ -99,6 +107,7 @@ export default function CodingBuilder() {
   };
 
   const aiCount = problems.filter(p => sourceOf(p) === 'ai').length;
+  const uploadCount = problems.filter(p => sourceOf(p) === 'upload').length;
   const manualCount = problems.filter(p => sourceOf(p) === 'manual').length;
   const selectedPs = problems.filter(p => p.status === 'approved');
   const selectedCount = selectedPs.length;
@@ -119,6 +128,20 @@ export default function CodingBuilder() {
 
   const computedSuggested = suggestedDuration(selectedPs);
   const effectiveDuration = finalDuration ?? computedSuggested;
+
+  const importProblems = (items: CodingProblem[]) => {
+    setProblems(ps => [...items, ...ps]);
+    setStep(2);
+    setPoolTab('upload');
+    setShowBulkImport(false);
+    toast.success('Problems imported', { description: `${items.length} problems added to the pool` });
+  };
+
+  const competencyCoverage = useMemo(() => {
+    const m = new Map<string, number>();
+    selectedPs.forEach(p => m.set(p.competencyName, (m.get(p.competencyName) ?? 0) + 1));
+    return Array.from(m.entries()).map(([name, count]) => ({ name, count }));
+  }, [selectedPs]);
 
   const toggleLanguage = (l: CodingLanguage) =>
     setBlueprint({ ...blueprint, languages: blueprint.languages.includes(l) ? blueprint.languages.filter(x => x !== l) : [...blueprint.languages, l] });
@@ -231,12 +254,16 @@ export default function CodingBuilder() {
                     </div>
                     <div>
                       <span className="hnx-label block mb-1.5">Skills Mapped to Round</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(round.assessedSkills && round.assessedSkills.length > 0
-                          ? round.assessedSkills
-                          : context.primarySkills
-                        ).map(s => <SkillChip key={s} label={s} variant="navy" size="sm" />)}
-                      </div>
+                      <SkillsEditor
+                        value={roundSkills}
+                        suggestions={Array.from(new Set([
+                          ...context.primarySkills,
+                          ...context.secondarySkills,
+                          ...(context.mustTestTech ?? []),
+                          ...job.competencies.map(c => c.name),
+                        ]))}
+                        onChange={setRoundSkills}
+                      />
                     </div>
                   </div>
                 </div>
@@ -301,7 +328,10 @@ export default function CodingBuilder() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-1">
+              <div className="flex justify-between items-center pt-1">
+                <Button size="lg" variant="outline" className="font-semibold" onClick={() => setShowBulkImport(true)}>
+                  <Upload className="w-4 h-4 mr-2" />Upload Problems
+                </Button>
                 <Button size="lg" className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-bold shadow-green-glow" onClick={handleGenerate} disabled={!blueprintValid}>
                   <Sparkles className="w-4 h-4 mr-2" />Generate Problems
                 </Button>
@@ -331,6 +361,9 @@ export default function CodingBuilder() {
                     <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={approveAllVisible} disabled={visibleProblems.length === 0}>
                       Approve All
                     </Button>
+                    <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={() => setShowBulkImport(true)}>
+                      <Upload className="w-3.5 h-3.5 mr-1" />Upload CSV
+                    </Button>
                     <Button size="sm" className="h-8 text-[12px] bg-primary" onClick={() => setShowManualAdd(true)}>
                       <FilePlus2 className="w-3.5 h-3.5 mr-1" />Add Problem Manually
                     </Button>
@@ -338,6 +371,7 @@ export default function CodingBuilder() {
                 </div>
                 <div className="flex items-center gap-2 border-t pt-3 flex-wrap">
                   <PoolTabButton active={poolTab === 'ai'} onClick={() => setPoolTab('ai')} label="AI Generated" count={aiCount} />
+                  <PoolTabButton active={poolTab === 'upload'} onClick={() => setPoolTab('upload')} label="Bulk Upload" count={uploadCount} />
                   <PoolTabButton active={poolTab === 'manual'} onClick={() => setPoolTab('manual')} label="Manual" count={manualCount} />
                   <PoolTabButton active={poolTab === 'all'} onClick={() => setPoolTab('all')} label="Total Pool" count={problems.length} />
                   <PoolTabButton active={poolTab === 'selected'} onClick={() => setPoolTab('selected')} label="Selected" count={selectedCount} tone="green" />
@@ -426,8 +460,9 @@ export default function CodingBuilder() {
 
                 <div className="hnx-card p-5">
                   <p className="hnx-label mb-3">Source Breakdown</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <SourceTile label="AI Generated" count={selectedPs.filter(p => sourceOf(p) === 'ai').length} tone="teal" />
+                    <SourceTile label="Bulk Uploaded" count={selectedPs.filter(p => sourceOf(p) === 'upload').length} tone="primary" />
                     <SourceTile label="Manually Added" count={selectedPs.filter(p => sourceOf(p) === 'manual').length} tone="warning" />
                   </div>
                 </div>
@@ -512,11 +547,11 @@ export default function CodingBuilder() {
               <PanelSection title="Pool Stats" defaultOpen>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <Stat label="AI" value={`${aiCount}`} />
+                  <Stat label="Uploaded" value={`${uploadCount}`} />
                   <Stat label="Manual" value={`${manualCount}`} />
                   <Stat label="Total" value={`${problems.length}`} />
                   <Stat label="Selected" value={`${selectedCount}`} tone="green" />
                   <Stat label="Target" value={`${target}`} />
-                  <Stat label="Tests" value={`${blueprint.testCases.visible}+${blueprint.testCases.hidden}`} />
                 </div>
               </PanelSection>
               <PanelSection title="Difficulty Distribution">
@@ -525,6 +560,25 @@ export default function CodingBuilder() {
                   medium={Math.round((difficulty.medium / Math.max(1, problems.length)) * 100)}
                   hard={Math.round((difficulty.hard / Math.max(1, problems.length)) * 100)}
                 />
+              </PanelSection>
+              <PanelSection title="Competency Coverage" defaultOpen>
+                <p className="text-[11px] text-muted-foreground mb-2 leading-relaxed">
+                  Mapped from JD & assessment scope. Counts update live as you select problems.
+                </p>
+                <div className="space-y-1.5">
+                  {job.competencies.map(c => {
+                    const live = competencyCoverage.find(x => x.name === c.name)?.count ?? 0;
+                    return (
+                      <div key={c.id} className="flex items-center gap-2 text-[12px]">
+                        <span className={cn('w-1 h-3 rounded-full',
+                          c.category === 'Technical' ? 'bg-primary' : c.category === 'Domain' ? 'bg-teal' : 'bg-hnxgreen-deep')} />
+                        <span className="flex-1 truncate">{c.name}</span>
+                        <span className={cn('text-[10px] tabular-nums font-semibold px-1.5 py-0.5 rounded',
+                          live > 0 ? 'bg-teal-light text-teal-deep' : 'bg-muted text-muted-foreground')}>{live}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </PanelSection>
               <PanelSection title="Language Coverage">
                 <div className="space-y-1.5">
@@ -554,6 +608,7 @@ export default function CodingBuilder() {
       </div>
 
       {showManualAdd && <ManualCodingModal onClose={() => setShowManualAdd(false)} onAdd={addManualProblem} competencyName={job.competencies[0]?.name || 'Technical Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} languages={blueprint.languages} />}
+      {showBulkImport && <BulkImportProblemsModal onClose={() => setShowBulkImport(false)} onImport={importProblems} competencyName={job.competencies[0]?.name || 'Technical Fit'} skillTag={context.primarySkills[0] || 'Core Skill'} languages={blueprint.languages} />}
       {showFinalProblems && <FinalProblemsOverlay problems={selectedPs} onClose={() => setShowFinalProblems(false)} />}
       {showSaveConfirm && <SaveConfirmOverlay onClose={() => setShowSaveConfirm(false)} onConfirm={save} />}
     </AppLayout>
@@ -779,9 +834,10 @@ function Stat({ label, value, tone = 'default' }: { label: string; value: string
   );
 }
 
-function SourceTile({ label, count, tone }: { label: string; count: number; tone: 'teal' | 'warning' }) {
+function SourceTile({ label, count, tone }: { label: string; count: number; tone: 'teal' | 'primary' | 'warning' }) {
   const tones = {
     teal: 'bg-teal-light text-teal-deep border-teal/30',
+    primary: 'bg-blue-light text-primary border-primary/20',
     warning: 'bg-warning-light text-warning border-warning/20',
   };
   return (
@@ -798,5 +854,127 @@ function SummaryRow({ label, value, tone }: { label: string; value: string; tone
       <span className="text-muted-foreground">{label}</span>
       <span className={cn('font-semibold text-right', tone === 'green' ? 'text-hnxgreen-deep' : 'text-foreground')}>{value}</span>
     </div>
+  );
+}
+
+function SkillsEditor({ value, suggestions, onChange }: { value: string[]; suggestions: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState('');
+  const remove = (s: string) => onChange(value.filter(v => v !== s));
+  const add = (s: string) => {
+    const t = s.trim();
+    if (!t || value.includes(t)) return;
+    onChange([...value, t]);
+  };
+  const unselected = suggestions.filter(s => !value.includes(s));
+  return (
+    <div className="rounded-lg border border-border bg-card p-2.5 space-y-2">
+      <div className="flex flex-wrap gap-1.5 min-h-7">
+        {value.length === 0 && <span className="text-[11px] text-muted-foreground py-0.5">No skills selected yet.</span>}
+        {value.map(s => (
+          <SkillChip key={s} label={s} variant="navy" size="sm" removable onRemove={() => remove(s)} />
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(draft); setDraft(''); } }}
+          placeholder="Add custom skill…"
+          className="hnx-input flex-1 h-8 text-[12px]"
+        />
+        <button
+          type="button"
+          onClick={() => { add(draft); setDraft(''); }}
+          className="h-8 w-8 rounded-md bg-primary/10 text-primary hover:bg-primary/20 flex items-center justify-center"
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      {unselected.length > 0 && (
+        <div className="pt-1.5 border-t border-border/60">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Suggestions</p>
+          <div className="flex flex-wrap gap-1">
+            {unselected.map(s => (
+              <button key={s} type="button" onClick={() => add(s)}
+                className="text-[11px] px-2 py-0.5 rounded-md border border-dashed border-border text-muted-foreground hover:border-teal hover:text-teal-deep hover:bg-teal-light/40 transition-colors">
+                + {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BulkImportProblemsModal({ onClose, onImport, competencyName, skillTag, languages }: {
+  onClose: () => void; onImport: (p: CodingProblem[]) => void;
+  competencyName: string; skillTag: string; languages: CodingLanguage[];
+}) {
+  const [summary, setSummary] = useState<{ total: number; valid: number; invalid: number } | null>(null);
+
+  const parseCsv = (text: string): CodingProblem[] => {
+    const rows = text.split(/\r?\n/).filter(Boolean);
+    if (rows.length === 0) return [];
+    const lines = rows.slice(1); // assume header
+    let invalid = 0;
+    const out: CodingProblem[] = [];
+    lines.forEach((line, idx) => {
+      const cols = line.match(/("[^"]*"|[^,]+)/g)?.map(c => c.replace(/^"|"$/g, '').trim()) || [];
+      // columns: title, summary, statement, input, output, constraints, difficulty, type, hiddenCount, skill
+      if (!cols[0] || !cols[2]) { invalid++; return; }
+      const diff = (cols[6] as CodingProblem['difficulty']) || 'Medium';
+      out.push({
+        id: `upload-${Date.now()}-${idx}`,
+        title: cols[0],
+        summary: cols[1] || cols[0],
+        fullStatement: cols[2],
+        ioFormat: { input: cols[3] || 'Standard input', output: cols[4] || 'Expected output' },
+        constraints: (cols[5] || '').split('|').filter(Boolean),
+        sampleCases: [{ input: 'sample input', output: 'sample output', explanation: 'Validates the core behavior.' }],
+        hiddenCaseCount: Number(cols[8]) || 6,
+        expectedComplexity: { time: 'O(n)', space: 'O(1)' },
+        scoring: { maxPoints: 100, perTestCase: 10 },
+        competencyId: 'imported', competencyName: cols[9] || competencyName, skillTag: cols[9] || skillTag,
+        difficulty: diff,
+        problemType: ((cols[7] as CodingProblemType) || 'Implementation'),
+        languagesSupported: languages,
+        estimatedSolveTimeMin: diff === 'Hard' ? 30 : diff === 'Medium' ? 20 : 12,
+        rationale: 'Imported via CSV.', status: 'pending', freshness: 'new', highRoleFit: true,
+      });
+    });
+    setSummary({ total: lines.length, valid: out.length, invalid });
+    return out;
+  };
+
+  const handleFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => onImport(parseCsv(String(reader.result || '')));
+    reader.readAsText(file);
+  };
+
+  return (
+    <ModalShell title="Bulk Upload Coding Problems" onClose={onClose}>
+      <div className="space-y-3">
+        <p className="text-[12px] text-muted-foreground">
+          CSV columns: <span className="font-mono">title, summary, statement, input, output, constraints (use | to separate), difficulty, type, hiddenCount, skill</span>
+        </p>
+        <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/5 p-5 text-[13px] font-semibold text-primary cursor-pointer">
+          <Upload className="w-4 h-4" />Upload CSV file
+          <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => handleFile(e.target.files?.[0])} />
+        </label>
+        {summary && (
+          <div className="rounded-md border bg-muted/30 p-3 text-[12px] grid grid-cols-3 gap-2">
+            <div><p className="text-muted-foreground">Total</p><p className="font-bold text-navy tabular-nums">{summary.total}</p></div>
+            <div><p className="text-muted-foreground">Valid</p><p className="font-bold text-hnxgreen-deep tabular-nums">{summary.valid}</p></div>
+            <div><p className="text-muted-foreground">Invalid</p><p className="font-bold text-destructive tabular-nums">{summary.invalid}</p></div>
+          </div>
+        )}
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Imported problems land in the <span className="font-semibold text-foreground">Bulk Upload</span> tab and can be reviewed alongside AI-generated and manual problems.
+        </p>
+      </div>
+    </ModalShell>
   );
 }
