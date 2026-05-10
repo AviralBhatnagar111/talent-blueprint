@@ -460,8 +460,9 @@ export default function CodingBuilder() {
 
                 <div className="hnx-card p-5">
                   <p className="hnx-label mb-3">Source Breakdown</p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <SourceTile label="AI Generated" count={selectedPs.filter(p => sourceOf(p) === 'ai').length} tone="teal" />
+                    <SourceTile label="Bulk Uploaded" count={selectedPs.filter(p => sourceOf(p) === 'upload').length} tone="primary" />
                     <SourceTile label="Manually Added" count={selectedPs.filter(p => sourceOf(p) === 'manual').length} tone="warning" />
                   </div>
                 </div>
