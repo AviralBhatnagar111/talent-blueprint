@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import {
   Sparkles, Save, ArrowRight, ArrowLeft, ChevronDown, Pencil, Check, X,
   Upload, FilePlus2, Shield, CheckCircle2, Eye,
-  Minus, Plus, ListChecks, Info, Brain, Plus as PlusIcon,
+  Minus, Plus, ListChecks, Info, Brain,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { Stepper } from '@/components/shared/Stepper';
