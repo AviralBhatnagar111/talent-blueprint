@@ -7,7 +7,7 @@ import {
   ArrowLeft, MapPin, Briefcase, Clock, Users, Target,
   Layers, CheckCircle2, AlertCircle, ArrowRight, Sparkles,
   Brain, Code2, FileText, UserPlus, Share2, Edit3, Download,
-  Building2, Mail, Calendar, DollarSign, CircleDot, Activity,
+  Building2, Mail, Calendar, DollarSign, CircleDot, Activity, Settings2,
 } from 'lucide-react';
 import { SkillChip } from '@/components/shared/SkillChip';
 import { RoundTypeIcon, ROUND_META } from '@/components/shared/RoundIcon';
@@ -295,7 +295,7 @@ export default function JobDetails() {
                         <p className="text-[13px] font-semibold text-navy truncate">{round.label}</p>
                         <p className="text-[11px] text-muted-foreground">{meta.name} · {round.durationMin} min</p>
                       </div>
-                      {(round.type === 'MCQ' || round.type === 'Coding') && (
+                       {(round.type === 'MCQ' || round.type === 'Coding') && (
                         <span className={cn('inline-flex items-center gap-1 text-[11px] font-semibold',
                           isReady ? 'text-hnxgreen-deep' : 'text-warning')}>
                           {isReady ? <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={2.5} /> : <AlertCircle className="w-3.5 h-3.5" strokeWidth={2.5} />}
@@ -311,6 +311,17 @@ export default function JobDetails() {
                         >
                           Build
                           <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      )}
+                      {round.type === 'AIInterview' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] px-2.5"
+                          onClick={() => navigate(`/jobs/${job.id}/round/${round.id}/ai-config`)}
+                        >
+                          <Settings2 className="w-3 h-3 mr-1" />
+                          {round.aiConfig ? 'Edit AI' : 'Configure AI'}
                         </Button>
                       )}
                     </div>
