@@ -467,15 +467,6 @@ export default function MCQBuilder() {
                   </div>
                 </div>
 
-                {/* Source breakdown */}
-                <div className="hnx-card p-5">
-                  <p className="hnx-label mb-3">Source Breakdown</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <SourceTile label="AI Generated" count={selectedQs.filter(q => sourceOf(q) === 'ai').length} tone="teal" />
-                    <SourceTile label="Bulk Uploaded" count={selectedQs.filter(q => sourceOf(q) === 'upload').length} tone="primary" />
-                    <SourceTile label="Manually Added" count={selectedQs.filter(q => sourceOf(q) === 'manual').length} tone="warning" />
-                  </div>
-                </div>
               </div>
 
               {/* Summary card */}
@@ -601,14 +592,23 @@ export default function MCQBuilder() {
           )}
 
           {step === 3 && (
-            <PanelSection title="Final Snapshot" defaultOpen>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <Stat label="Selected" value={`${selectedCount}`} tone="green" />
-                <Stat label="Duration" value={`${effectiveDuration}m`} />
-                <Stat label="Pass" value={`${passThreshold}%`} />
-                <Stat label="Sources" value={`${[aiCount && 'AI', uploadCount && 'Bulk', manualCount && 'Manual'].filter(Boolean).length}`} />
-              </div>
-            </PanelSection>
+            <>
+              <PanelSection title="Final Snapshot" defaultOpen>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <Stat label="Selected" value={`${selectedCount}`} tone="green" />
+                  <Stat label="Duration" value={`${effectiveDuration}m`} />
+                  <Stat label="Pass" value={`${passThreshold}%`} />
+                  <Stat label="Sources" value={`${[aiCount && 'AI', uploadCount && 'Bulk', manualCount && 'Manual'].filter(Boolean).length}`} />
+                </div>
+              </PanelSection>
+              <PanelSection title="Source Breakdown" defaultOpen>
+                <div className="grid grid-cols-3 gap-2">
+                  <SourceTile label="AI" count={selectedQs.filter(q => sourceOf(q) === 'ai').length} tone="teal" />
+                  <SourceTile label="Bulk" count={selectedQs.filter(q => sourceOf(q) === 'upload').length} tone="primary" />
+                  <SourceTile label="Manual" count={selectedQs.filter(q => sourceOf(q) === 'manual').length} tone="warning" />
+                </div>
+              </PanelSection>
+            </>
           )}
         </IntelligencePanel>
       </div>
