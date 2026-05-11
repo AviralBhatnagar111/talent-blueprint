@@ -268,7 +268,7 @@ export default function TemplateBuilder() {
 
 function RoundCard({
   round, index, expanded, onToggleExpand, onUpdate, onDelete,
-  onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange,
+  onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange, onConfigureAI,
 }: {
   round: Round;
   index: number;
@@ -283,6 +283,7 @@ function RoundCard({
   skills: string[];
   selectedSkills: string[];
   onSkillsChange: (skills: string[]) => void;
+  onConfigureAI?: () => void;
 }) {
   const meta = ROUND_META[round.type];
   const isAssessment = round.type === 'MCQ' || round.type === 'Coding';
@@ -338,6 +339,15 @@ function RoundCard({
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {onConfigureAI && (
+            <button
+              onClick={onConfigureAI}
+              className="h-8 px-2.5 rounded-md bg-teal-light text-teal-deep hover:bg-teal/20 text-[11.5px] font-semibold inline-flex items-center gap-1.5"
+              aria-label="Configure AI"
+            >
+              <Settings2 className="w-3.5 h-3.5" />Configure AI
+            </button>
+          )}
           <button onClick={onDelete} className="h-8 w-8 rounded-md hover:bg-destructive/10 hover:text-destructive flex items-center justify-center text-muted-foreground" aria-label="Delete">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
