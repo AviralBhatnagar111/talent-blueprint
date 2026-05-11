@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   GripVertical, Plus, Trash2, Sparkles, X, ChevronDown, ChevronRight,
-  AlertCircle, Save, Clock, Info, Check,
+  AlertCircle, Save, Clock, Info, Check, Settings2,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { ROUND_META, RoundTypeIcon } from '@/components/shared/RoundIcon';
@@ -32,6 +32,7 @@ const ROUND_SKILL_HINTS: Partial<Record<RoundType, string[]>> = {
 
 export default function TemplateBuilder() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const job = useStore(s => s.getJob(jobId!));
   const updateRounds = useStore(s => s.updateJobRounds);
 
@@ -191,6 +192,11 @@ export default function TemplateBuilder() {
                 skills={skillsForRound(round.type)}
                 selectedSkills={round.assessedSkills ?? []}
                 onSkillsChange={(skills) => updateRoundSkills(round.id, skills)}
+                onConfigureAI={
+                  round.type === 'AIInterview'
+                    ? () => navigate(`/jobs/${job.id}/round/${round.id}/ai-config`)
+                    : undefined
+                }
               />
             ))}
           </div>
