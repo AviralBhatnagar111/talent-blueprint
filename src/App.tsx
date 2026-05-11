@@ -9,6 +9,7 @@ import JobDetails from "./pages/JobDetails";
 import TemplateBuilder from "./pages/TemplateBuilder";
 import MCQBuilder from "./pages/MCQBuilder";
 import CodingBuilder from "./pages/CodingBuilder";
+import AIRoundConfig from "./pages/AIRoundConfig";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/jobs/:jobId/template" element={<TemplateBuilder />} />
           <Route path="/jobs/:jobId/template/rounds/:roundId/mcq-builder" element={<MCQBuilder />} />
           <Route path="/jobs/:jobId/template/rounds/:roundId/coding-builder" element={<CodingBuilder />} />
+          <Route path="/jobs/:jobId/round/:roundId/ai-config" element={<AIRoundConfig />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

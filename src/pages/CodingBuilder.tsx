@@ -458,14 +458,6 @@ export default function CodingBuilder() {
                   </div>
                 </div>
 
-                <div className="hnx-card p-5">
-                  <p className="hnx-label mb-3">Source Breakdown</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <SourceTile label="AI Generated" count={selectedPs.filter(p => sourceOf(p) === 'ai').length} tone="teal" />
-                    <SourceTile label="Bulk Uploaded" count={selectedPs.filter(p => sourceOf(p) === 'upload').length} tone="primary" />
-                    <SourceTile label="Manually Added" count={selectedPs.filter(p => sourceOf(p) === 'manual').length} tone="warning" />
-                  </div>
-                </div>
               </div>
 
               <div className="hnx-card p-5 h-fit">
@@ -595,14 +587,23 @@ export default function CodingBuilder() {
           )}
 
           {step === 3 && (
-            <PanelSection title="Final Snapshot" defaultOpen>
-              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                <Stat label="Selected" value={`${selectedCount}`} tone="green" />
-                <Stat label="Duration" value={`${effectiveDuration}m`} />
-                <Stat label="Pass" value={`${passThreshold}%`} />
-                <Stat label="Langs" value={`${blueprint.languages.length}`} />
-              </div>
-            </PanelSection>
+            <>
+              <PanelSection title="Final Snapshot" defaultOpen>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <Stat label="Selected" value={`${selectedCount}`} tone="green" />
+                  <Stat label="Duration" value={`${effectiveDuration}m`} />
+                  <Stat label="Pass" value={`${passThreshold}%`} />
+                  <Stat label="Langs" value={`${blueprint.languages.length}`} />
+                </div>
+              </PanelSection>
+              <PanelSection title="Source Breakdown" defaultOpen>
+                <div className="grid grid-cols-3 gap-2">
+                  <SourceTile label="AI" count={selectedPs.filter(p => sourceOf(p) === 'ai').length} tone="teal" />
+                  <SourceTile label="Bulk" count={selectedPs.filter(p => sourceOf(p) === 'upload').length} tone="primary" />
+                  <SourceTile label="Manual" count={selectedPs.filter(p => sourceOf(p) === 'manual').length} tone="warning" />
+                </div>
+              </PanelSection>
+            </>
           )}
         </IntelligencePanel>
       </div>

@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import {
   GripVertical, Plus, Trash2, Sparkles, X, ChevronDown, ChevronRight,
-  AlertCircle, Save, Clock, Info, Check,
+  AlertCircle, Save, Clock, Info, Check, Settings2,
 } from 'lucide-react';
 import { ContextTopBar, NavyChip } from '@/components/shared/ContextTopBar';
 import { ROUND_META, RoundTypeIcon } from '@/components/shared/RoundIcon';
@@ -32,6 +32,7 @@ const ROUND_SKILL_HINTS: Partial<Record<RoundType, string[]>> = {
 
 export default function TemplateBuilder() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const job = useStore(s => s.getJob(jobId!));
   const updateRounds = useStore(s => s.updateJobRounds);
 
@@ -191,6 +192,11 @@ export default function TemplateBuilder() {
                 skills={skillsForRound(round.type)}
                 selectedSkills={round.assessedSkills ?? []}
                 onSkillsChange={(skills) => updateRoundSkills(round.id, skills)}
+                onConfigureAI={
+                  round.type === 'AIInterview'
+                    ? () => navigate(`/jobs/${job.id}/round/${round.id}/ai-config`)
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -262,7 +268,7 @@ export default function TemplateBuilder() {
 
 function RoundCard({
   round, index, expanded, onToggleExpand, onUpdate, onDelete,
-  onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange,
+  onDragStart, onDragOver, onDragEnd, isDragging, skills, selectedSkills, onSkillsChange, onConfigureAI,
 }: {
   round: Round;
   index: number;
@@ -277,6 +283,7 @@ function RoundCard({
   skills: string[];
   selectedSkills: string[];
   onSkillsChange: (skills: string[]) => void;
+  onConfigureAI?: () => void;
 }) {
   const meta = ROUND_META[round.type];
   const isAssessment = round.type === 'MCQ' || round.type === 'Coding';
@@ -332,6 +339,15 @@ function RoundCard({
 
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {onConfigureAI && (
+            <button
+              onClick={onConfigureAI}
+              className="h-8 px-2.5 rounded-md bg-teal-light text-teal-deep hover:bg-teal/20 text-[11.5px] font-semibold inline-flex items-center gap-1.5"
+              aria-label="Configure AI"
+            >
+              <Settings2 className="w-3.5 h-3.5" />Configure AI
+            </button>
+          )}
           <button onClick={onDelete} className="h-8 w-8 rounded-md hover:bg-destructive/10 hover:text-destructive flex items-center justify-center text-muted-foreground" aria-label="Delete">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
