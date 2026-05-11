@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { JobRecord, Round, MCQQuestion, CodingProblem, RoleContext, Competency } from '@/types/hirenowx';
+import type { JobRecord, Round, MCQQuestion, CodingProblem, RoleContext, Competency, AIRoundConfig } from '@/types/hirenowx';
 import { mockJobs, sampleMCQQuestions, sampleCodingProblems } from '@/data/mockData';
 
 interface AssessmentMCQ {
@@ -37,6 +37,7 @@ interface HireNowXStore {
 
   saveMCQAssessment: (jobId: string, roundId: string, a: AssessmentMCQ) => void;
   saveCodingAssessment: (jobId: string, roundId: string, a: AssessmentCoding) => void;
+  saveAIRoundConfig: (jobId: string, roundId: string, cfg: AIRoundConfig) => void;
 
   getMCQ: (roundId: string) => AssessmentMCQ | undefined;
   getCoding: (roundId: string) => AssessmentCoding | undefined;
@@ -88,6 +89,16 @@ export const useStore = create<HireNowXStore>((set, get) => ({
         jobs: state.jobs.map(j => j.id === jobId ? { ...j, rounds: updatedRounds } : j),
       };
     }),
+
+  saveAIRoundConfig: (jobId, roundId, cfg) =>
+    set(state => ({
+      jobs: state.jobs.map(j => j.id !== jobId ? j : {
+        ...j,
+        rounds: j.rounds.map(r => r.id === roundId
+          ? { ...r, aiConfig: cfg, durationMin: cfg.durationMin || r.durationMin, assessmentStatus: 'ready' as const }
+          : r),
+      }),
+    })),
 
   getMCQ: (roundId) => get().mcqAssessments[roundId],
   getCoding: (roundId) => get().codingAssessments[roundId],
