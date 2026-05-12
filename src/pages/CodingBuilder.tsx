@@ -78,14 +78,10 @@ export default function CodingBuilder() {
 
   const difficultyTotal = blueprint.difficultyMix.easy + blueprint.difficultyMix.medium + blueprint.difficultyMix.hard;
   const difficultyValid = difficultyTotal === 100;
-  const blueprintValid = generateCount >= blueprint.problemsToSend && difficultyValid;
+  const blueprintValid = difficultyValid;
 
   const handleGenerate = () => {
-    if (!blueprintValid) {
-      if (!difficultyValid) toast.error('Difficulty mix must total 100%');
-      else toast.error('Problems to Generate must be ≥ Problems to Send');
-      return;
-    }
+    if (!difficultyValid) { toast.error('Difficulty mix must total 100%'); return; }
     setGenerating(true); setStep(2);
   };
   const handleGenComplete = () => {
@@ -111,8 +107,8 @@ export default function CodingBuilder() {
   const manualCount = problems.filter(p => sourceOf(p) === 'manual').length;
   const selectedPs = problems.filter(p => p.status === 'approved');
   const selectedCount = selectedPs.length;
-  const target = blueprint.problemsToSend;
-  const selectionMet = selectedCount === target;
+  const target = selectedCount;
+  const canContinue = selectedCount > 0;
 
   const visibleProblems = useMemo(() => {
     if (poolTab === 'all') return problems;
@@ -151,21 +147,39 @@ export default function CodingBuilder() {
   const save = () => {
     saveCodingAssessment(job.id, round.id, {
       id: `coding-${Date.now()}`, roundId: round.id, name: assessmentName,
-      problemsToSend: target, durationMin: effectiveDuration, passThreshold,
+      problemsToSend: selectedCount, durationMin: effectiveDuration, passThreshold,
       languages: blueprint.languages, problems: selectedPs, status: 'ready',
     });
-    toast.success('Coding Assessment saved & attached', { description: `${target} problems attached to ${round.label}` });
+    toast.success('Coding Assessment saved & attached', { description: `${selectedCount} problems attached to ${round.label}` });
     navigate(`/jobs/${job.id}`);
   };
 
-  const selectFirstNToTarget = () => {
-    let n = 0;
-    setProblems(ps => ps.map(p => {
-      if (p.status === 'approved') { n++; return p; }
-      if (n < target) { n++; return { ...p, status: 'approved' as const }; }
-      return p;
-    }));
-    toast.success(`Selected ${target} problems`);
+  const autoSelect = (mode: 'clear' | 'all' | number) => {
+    if (mode === 'clear') {
+      setProblems(ps => ps.map(p => ({ ...p, status: 'pending' as const })));
+      toast.success('Selection cleared'); return;
+    }
+    if (mode === 'all') {
+      setProblems(ps => ps.map(p => ({ ...p, status: 'approved' as const })));
+      toast.success(`Selected all ${problems.length} problems`); return;
+    }
+    const n = Math.min(mode, problems.length);
+    const mix = blueprint.difficultyMix;
+    const easyN = Math.round(n * mix.easy / 100);
+    const medN = Math.round(n * mix.medium / 100);
+    const hardN = n - easyN - medN;
+    const want: Record<'Easy'|'Medium'|'Hard', number> = { Easy: easyN, Medium: medN, Hard: hardN };
+    const picked = new Set<string>();
+    (['Easy','Medium','Hard'] as const).forEach(d => {
+      const pool = problems.filter(p => p.difficulty === d).map(p => p.id).sort(() => Math.random() - 0.5);
+      pool.slice(0, want[d]).forEach(id => picked.add(id));
+    });
+    if (picked.size < n) {
+      const rest = problems.filter(p => !picked.has(p.id)).map(p => p.id).sort(() => Math.random() - 0.5);
+      rest.slice(0, n - picked.size).forEach(id => picked.add(id));
+    }
+    setProblems(ps => ps.map(p => picked.has(p.id) ? { ...p, status: 'approved' as const } : p));
+    toast.success(`Selected ${picked.size} random problems`);
   };
   const approveAllVisible = () => {
     const ids = new Set(visibleProblems.map(p => p.id));
@@ -188,7 +202,7 @@ export default function CodingBuilder() {
             <Button size="sm" variant="ghost" className="text-navy-foreground/90 hover:bg-white/10 hover:text-navy-foreground h-8" onClick={() => toast('Draft saved')}>
               <Save className="w-3.5 h-3.5 mr-1.5" />Save Draft
             </Button>
-            <Button size="sm" className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold h-8" onClick={() => setShowSaveConfirm(true)} disabled={step !== 3 || !selectionMet}>
+            <Button size="sm" className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold h-8" onClick={() => setShowSaveConfirm(true)} disabled={step !== 3 || selectedCount === 0}>
               Save & Attach to Round
             </Button>
           </>
@@ -222,7 +236,6 @@ export default function CodingBuilder() {
                   <div className="flex items-center gap-2 mb-4">
                     <Brain className="w-4 h-4 text-primary" strokeWidth={2.5} />
                     <h2 className="text-[15px] font-bold text-navy">Role Context</h2>
-                    <AIBadge />
                   </div>
                   <div className="space-y-3">
                     <Tile label="Role" value={context.roleTitle} />
@@ -230,13 +243,13 @@ export default function CodingBuilder() {
                     <Tile label="Domain" value={context.domain} />
                     <Tile label="Sub-domain" value={context.subDomain} />
                     <div>
-                      <div className="flex items-center gap-2 mb-1.5"><span className="hnx-label">Must-test technologies</span><AIBadge /></div>
+                      <div className="flex items-center gap-2 mb-1.5"><span className="hnx-label">Must-test technologies</span></div>
                       <div className="flex flex-wrap gap-1.5">
                         {(context.mustTestTech || []).map(t => <SkillChip key={t} label={t} variant="teal" size="sm" />)}
                       </div>
                     </div>
                     <div>
-                      <div className="flex items-center gap-2 mb-1.5"><span className="hnx-label">Coding languages allowed</span><AIBadge /></div>
+                      <div className="flex items-center gap-2 mb-1.5"><span className="hnx-label">Coding languages allowed</span></div>
                       <div className="flex flex-wrap gap-1.5">
                         {ALL_LANGUAGES.map(l => {
                           const on = blueprint.languages.includes(l);
@@ -274,10 +287,7 @@ export default function CodingBuilder() {
                   <p className="text-[12px] text-muted-foreground mb-5">AI generates a larger pool — you'll select the final problems.</p>
                   <div className="space-y-4">
                     <NumberStepper label="Problems to Generate" value={generateCount} step={1} onChange={setGenerateCount} suffix="problems" min={1} />
-                    <NumberStepper label="Problems to Send" value={blueprint.problemsToSend} step={1} onChange={(v) => setBlueprint({ ...blueprint, problemsToSend: v })} suffix="problems" min={1} />
-                    {generateCount < blueprint.problemsToSend && (
-                      <p className="text-[11px] text-destructive">Generate at least {blueprint.problemsToSend} problems.</p>
-                    )}
+                    <p className="text-[11px] text-muted-foreground -mt-2">You'll pick the final problems to send in the next step.</p>
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="hnx-label">Difficulty Mix</span>
@@ -349,15 +359,32 @@ export default function CodingBuilder() {
                     <div>
                       <h2 className="text-[15px] font-bold text-navy">Problem Pool</h2>
                       <p className="text-[12px] text-muted-foreground">
-                        Selected <span className="font-bold text-navy tabular-nums">{selectedCount} / {target}</span>
-                        {selectionMet ? ' · ready to finalize' : ` · select ${Math.max(0, target - selectedCount)} more`}
+                        Selected <span className="font-bold text-navy tabular-nums">{selectedCount}</span>
+                        {selectedCount > 0 ? ' · ready to finalize' : ' · pick any number of problems to continue'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={selectFirstNToTarget} disabled={problems.length === 0}>
-                      <Check className="w-3.5 h-3.5 mr-1" />Select {target}
-                    </Button>
+                    <select
+                      className="h-8 text-[12px] rounded-md border border-border bg-card px-2 font-medium hover:border-teal/40 focus:outline-none focus:border-teal"
+                      value=""
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (!v) return;
+                        if (v === 'all') autoSelect('all');
+                        else if (v === 'clear') autoSelect('clear');
+                        else autoSelect(parseInt(v, 10));
+                        e.target.value = '';
+                      }}
+                      disabled={problems.length === 0}
+                    >
+                      <option value="">Auto Select…</option>
+                      <option value="5">Select Random 5</option>
+                      <option value="10">Select Random 10</option>
+                      <option value="20">Select Random 20</option>
+                      <option value="all">Select All</option>
+                      <option value="clear">Clear Selection</option>
+                    </select>
                     <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={approveAllVisible} disabled={visibleProblems.length === 0}>
                       Approve All
                     </Button>
@@ -405,7 +432,7 @@ export default function CodingBuilder() {
 
               <div className="flex justify-between items-center pt-2">
                 <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="w-3.5 h-3.5 mr-1.5" />Back</Button>
-                <Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold" onClick={() => setStep(3)} disabled={!selectionMet}>
+                <Button className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold" onClick={() => setStep(3)} disabled={!canContinue}>
                   Continue to Finalize<ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Button>
               </div>
@@ -422,7 +449,7 @@ export default function CodingBuilder() {
                     <div className="bg-navy text-navy-foreground px-4 py-2.5 flex items-center justify-between">
                       <p className="text-[13px] font-bold">{assessmentName}</p>
                       <div className="flex items-center gap-3 text-[11px]">
-                        <span>{target} problems · {effectiveDuration} min</span>
+                        <span>{selectedCount} problems · {effectiveDuration} min</span>
                         <select className="bg-navy-soft text-navy-foreground text-[11px] rounded px-2 py-1 border border-white/20">
                           {blueprint.languages.map(l => <option key={l}>{l}</option>)}
                         </select>
@@ -430,7 +457,7 @@ export default function CodingBuilder() {
                     </div>
                     <div className="grid grid-cols-2 min-h-[280px]">
                       <div className="p-4 border-r bg-card">
-                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Problem 1 of {target}</p>
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Problem 1 of {selectedCount}</p>
                         <h4 className="text-[14px] font-bold text-navy mb-2">{selectedPs[0]?.title || 'Sample Problem'}</h4>
                         <p className="text-[12px] text-foreground/80 leading-relaxed mb-3">{selectedPs[0]?.summary || 'Sample problem summary appears here.'}</p>
                         <div className="text-[11px] space-y-1 text-muted-foreground">
@@ -467,7 +494,7 @@ export default function CodingBuilder() {
                     <label className="hnx-label block mb-1">Assessment Name</label>
                     <input value={assessmentName} onChange={(e) => setAssessmentName(e.target.value)} className="hnx-input w-full" />
                   </div>
-                  <SummaryRow label="Selected Problems" value={`${target}`} />
+                  <SummaryRow label="Final Selected Count" value={`${selectedCount}`} tone="green" />
                   <div>
                     <label className="hnx-label block mb-1">Suggested Duration</label>
                     <div className="flex items-center gap-2">
@@ -617,7 +644,7 @@ export default function CodingBuilder() {
 }
 
 function Tile({ label, value }: { label: string; value: string }) {
-  return <div><div className="flex items-center gap-2 mb-1"><span className="hnx-label">{label}</span><AIBadge /></div><p className="text-[13px] font-semibold text-navy">{value}</p></div>;
+  return <div><div className="flex items-center gap-2 mb-1"><span className="hnx-label">{label}</span></div><p className="text-[13px] font-semibold text-navy">{value}</p></div>;
 }
 
 function NumberStepper({ label, value, step, onChange, suffix, min = 1 }: { label: string; value: number; step: number; onChange: (v: number) => void; suffix: string; min?: number }) {
