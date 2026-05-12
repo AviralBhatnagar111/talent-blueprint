@@ -83,14 +83,10 @@ export default function MCQBuilder() {
 
   const difficultyTotal = blueprint.difficultyMix.easy + blueprint.difficultyMix.medium + blueprint.difficultyMix.hard;
   const difficultyValid = difficultyTotal === 100;
-  const blueprintValid = generateCount >= blueprint.questionsToSend && difficultyValid;
+  const blueprintValid = difficultyValid;
 
   const handleGenerate = () => {
-    if (!blueprintValid) {
-      if (!difficultyValid) toast.error('Difficulty mix must total 100%');
-      else toast.error('Questions to Generate must be ≥ Questions to Send');
-      return;
-    }
+    if (!difficultyValid) { toast.error('Difficulty mix must total 100%'); return; }
     setGenerating(true);
     setStep(2);
   };
@@ -129,8 +125,8 @@ export default function MCQBuilder() {
   const manualCount = questions.filter(q => sourceOf(q) === 'manual').length;
   const selectedQs = questions.filter(q => q.status === 'approved');
   const selectedCount = selectedQs.length;
-  const target = blueprint.questionsToSend;
-  const selectionMet = selectedCount === target;
+  const target = selectedCount;
+  const canContinue = selectedCount > 0;
 
   const visibleQuestions = useMemo(() => {
     if (poolTab === 'all') return questions;
@@ -158,25 +154,44 @@ export default function MCQBuilder() {
       id: `mcq-${Date.now()}`,
       roundId: round.id,
       name: assessmentName,
-      questionsToSend: target,
+      questionsToSend: selectedCount,
       durationMin: effectiveDuration,
       passThreshold,
       questions: selectedQs,
       status: 'ready',
     });
-    toast.success('MCQ Assessment saved & attached', { description: `${target} questions attached to ${round.label}` });
+    toast.success('MCQ Assessment saved & attached', { description: `${selectedCount} questions attached to ${round.label}` });
     navigate(`/jobs/${job.id}`);
   };
 
-  const selectFirstNToTarget = () => {
-    const need = target;
-    let n = 0;
-    setQuestions(qs => qs.map(q => {
-      if (q.status === 'approved') { n++; return q; }
-      if (n < need) { n++; return { ...q, status: 'approved' as const }; }
-      return q;
-    }));
-    toast.success(`Selected ${target} questions`);
+  const autoSelect = (mode: 'clear' | 'all' | number) => {
+    if (mode === 'clear') {
+      setQuestions(qs => qs.map(q => ({ ...q, status: 'pending' as const })));
+      toast.success('Selection cleared');
+      return;
+    }
+    if (mode === 'all') {
+      setQuestions(qs => qs.map(q => ({ ...q, status: 'approved' as const })));
+      toast.success(`Selected all ${questions.length} questions`);
+      return;
+    }
+    const n = Math.min(mode, questions.length);
+    const mix = blueprint.difficultyMix;
+    const easyN = Math.round(n * mix.easy / 100);
+    const medN = Math.round(n * mix.medium / 100);
+    const hardN = n - easyN - medN;
+    const want: Record<'Easy'|'Medium'|'Hard', number> = { Easy: easyN, Medium: medN, Hard: hardN };
+    const picked = new Set<string>();
+    (['Easy','Medium','Hard'] as const).forEach(d => {
+      const pool = questions.filter(q => q.difficulty === d).map(q => q.id).sort(() => Math.random() - 0.5);
+      pool.slice(0, want[d]).forEach(id => picked.add(id));
+    });
+    if (picked.size < n) {
+      const rest = questions.filter(q => !picked.has(q.id)).map(q => q.id).sort(() => Math.random() - 0.5);
+      rest.slice(0, n - picked.size).forEach(id => picked.add(id));
+    }
+    setQuestions(qs => qs.map(q => picked.has(q.id) ? { ...q, status: 'approved' as const } : q));
+    toast.success(`Selected ${picked.size} random questions`);
   };
 
   const approveAllVisible = () => {
@@ -204,7 +219,7 @@ export default function MCQBuilder() {
               size="sm"
               className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold h-8"
               onClick={() => setShowSaveConfirm(true)}
-              disabled={step !== 3 || !selectionMet}
+              disabled={step !== 3 || selectedCount === 0}
             >
               Save & Attach to Round
             </Button>
@@ -240,7 +255,6 @@ export default function MCQBuilder() {
                   <div className="flex items-center gap-2 mb-4">
                     <Brain className="w-4 h-4 text-primary" strokeWidth={2.5} />
                     <h2 className="text-[15px] font-bold text-navy">Role Context</h2>
-                    <AIBadge />
                   </div>
                   <div className="space-y-3">
                     <EditableTile label="Role" value={context.roleTitle} onChange={(v) => setContext({ ...context, roleTitle: v })} />
@@ -250,7 +264,6 @@ export default function MCQBuilder() {
                     <div>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="hnx-label">Primary Skills</span>
-                        <AIBadge />
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {context.primarySkills.map(s => <SkillChip key={s} label={s} variant="teal" size="sm" />)}
@@ -259,7 +272,6 @@ export default function MCQBuilder() {
                     <div>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="hnx-label">Secondary Skills</span>
-                        <AIBadge />
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {context.secondarySkills.map(s => <SkillChip key={s} label={s} variant="muted" size="sm" />)}
@@ -268,7 +280,6 @@ export default function MCQBuilder() {
                     <div>
                       <div className="flex items-center gap-2 mb-1.5">
                         <span className="hnx-label">Role Objective</span>
-                        <AIBadge />
                       </div>
                       <p className="text-[12.5px] text-foreground/80 leading-relaxed">{context.roleObjective}</p>
                     </div>
@@ -281,10 +292,7 @@ export default function MCQBuilder() {
                   <p className="text-[12px] text-muted-foreground mb-5">AI will generate a larger pool — you'll select the final questions.</p>
                   <div className="space-y-4">
                     <NumberStepper label="Questions to Generate" value={generateCount} onChange={setGenerateCount} suffix="questions" step={5} min={5} />
-                    <NumberStepper label="Questions to Send" value={blueprint.questionsToSend} onChange={(v) => setBlueprint({ ...blueprint, questionsToSend: v })} suffix="questions" step={1} min={1} />
-                    {generateCount < blueprint.questionsToSend && (
-                      <p className="text-[11px] text-destructive">Generate at least {blueprint.questionsToSend} questions.</p>
-                    )}
+                    <p className="text-[11px] text-muted-foreground -mt-2">You'll pick the final questions to send in the next step.</p>
                     <div>
                       <div className="flex items-center justify-between mb-2">
                         <span className="hnx-label">Difficulty Mix</span>
@@ -368,15 +376,32 @@ export default function MCQBuilder() {
                     <div>
                       <h2 className="text-[15px] font-bold text-navy">Question Pool</h2>
                       <p className="text-[12px] text-muted-foreground">
-                        Selected <span className="font-bold text-navy tabular-nums">{selectedCount} / {target}</span>
-                        {selectionMet ? ' · ready to finalize' : ` · select ${Math.max(0, target - selectedCount)} more`}
+                        Selected <span className="font-bold text-navy tabular-nums">{selectedCount}</span>
+                        {selectedCount > 0 ? ' · ready to finalize' : ' · pick any number of questions to continue'}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={selectFirstNToTarget} disabled={questions.length === 0}>
-                      <Check className="w-3.5 h-3.5 mr-1" />Select {target}
-                    </Button>
+                    <select
+                      className="h-8 text-[12px] rounded-md border border-border bg-card px-2 font-medium hover:border-teal/40 focus:outline-none focus:border-teal"
+                      value=""
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (!v) return;
+                        if (v === 'all') autoSelect('all');
+                        else if (v === 'clear') autoSelect('clear');
+                        else autoSelect(parseInt(v, 10));
+                        e.target.value = '';
+                      }}
+                      disabled={questions.length === 0}
+                    >
+                      <option value="">Auto Select…</option>
+                      <option value="5">Select Random 5</option>
+                      <option value="10">Select Random 10</option>
+                      <option value="20">Select Random 20</option>
+                      <option value="all">Select All</option>
+                      <option value="clear">Clear Selection</option>
+                    </select>
                     <Button size="sm" variant="outline" className="h-8 text-[12px]" onClick={approveAllVisible} disabled={visibleQuestions.length === 0}>
                       Approve All
                     </Button>
@@ -423,7 +448,7 @@ export default function MCQBuilder() {
                 <Button
                   className="bg-hnxgreen hover:bg-hnxgreen-deep text-navy font-semibold"
                   onClick={() => setStep(3)}
-                  disabled={!selectionMet}
+                  disabled={!canContinue}
                 >
                   Continue to Finalize<ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </Button>
@@ -440,13 +465,13 @@ export default function MCQBuilder() {
                   <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">Candidate Preview</p>
                   <div className="border-2 border-dashed border-border rounded-lg p-5 bg-muted/20">
                     <h3 className="text-[18px] font-bold text-navy mb-1">{assessmentName}</h3>
-                    <p className="text-[12px] text-muted-foreground mb-3">{target} questions · {effectiveDuration} minutes · Once submitted, cannot be edited</p>
+                    <p className="text-[12px] text-muted-foreground mb-3">{selectedCount} questions · {effectiveDuration} minutes · Once submitted, cannot be edited</p>
                     <div className="bg-blue-light/40 border border-primary/15 rounded-md p-3 mb-4 text-[12px] text-foreground/80">
                       <span className="font-semibold text-navy">Instructions:</span> Read each question carefully. You may not return to a question once submitted. Do not switch tabs — the test is monitored.
                     </div>
                     <div className="bg-card rounded-lg p-4 border mb-3">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Question 1 of {target}</span>
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Question 1 of {selectedCount}</span>
                         <span className="text-[12px] font-mono text-muted-foreground">{String(effectiveDuration).padStart(2, '0')}:00</span>
                       </div>
                       <p className="text-[14px] text-navy font-semibold mb-3">{selectedQs[0]?.text || 'Sample question text appears here.'}</p>
@@ -477,7 +502,7 @@ export default function MCQBuilder() {
                     <label className="hnx-label block mb-1">Assessment Name</label>
                     <input value={assessmentName} onChange={(e) => setAssessmentName(e.target.value)} className="hnx-input w-full" />
                   </div>
-                  <SummaryRow label="Selected Questions" value={`${target}`} />
+                  <SummaryRow label="Final Selected Count" value={`${selectedCount}`} tone="green" />
                   <div>
                     <label className="hnx-label block mb-1">Suggested Duration</label>
                     <div className="flex items-center gap-2">
