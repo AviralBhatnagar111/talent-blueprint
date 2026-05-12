@@ -644,7 +644,7 @@ export default function CodingBuilder() {
 }
 
 function Tile({ label, value }: { label: string; value: string }) {
-  return <div><div className="flex items-center gap-2 mb-1"><span className="hnx-label">{label}</span><AIBadge /></div><p className="text-[13px] font-semibold text-navy">{value}</p></div>;
+  return <div><div className="flex items-center gap-2 mb-1"><span className="hnx-label">{label}</span></div><p className="text-[13px] font-semibold text-navy">{value}</p></div>;
 }
 
 function NumberStepper({ label, value, step, onChange, suffix, min = 1 }: { label: string; value: number; step: number; onChange: (v: number) => void; suffix: string; min?: number }) {
