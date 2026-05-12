@@ -655,7 +655,6 @@ function EditableTile({ label, value, onChange, readOnly }: { label: string; val
     <div>
       <div className="flex items-center gap-2 mb-1">
         <span className="hnx-label">{label}</span>
-        <AIBadge />
       </div>
       {editing && !readOnly ? (
         <div className="flex items-center gap-1.5">
