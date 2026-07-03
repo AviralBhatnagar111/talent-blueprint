@@ -313,7 +313,7 @@ export default function JobDetails() {
                           <ArrowRight className="w-3 h-3 ml-1" />
                         </Button>
                       )}
-                      {round.type === 'AIInterview' && (
+                      {(round.type === 'AIInterview' || round.type === 'AICoding') && (
                         <Button
                           size="sm"
                           variant="outline"
