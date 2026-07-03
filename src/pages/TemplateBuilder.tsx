@@ -17,13 +17,14 @@ import {
 import { cn } from '@/lib/utils';
 import type { Round, RoundType } from '@/types/hirenowx';
 
-const ADDABLE_ROUND_TYPES: RoundType[] = ['MCQ', 'Coding', 'AIInterview', 'ManualInterview', 'HR', 'TakeHome', 'FinalApproval'];
+const ADDABLE_ROUND_TYPES: RoundType[] = ['MCQ', 'Coding', 'AIInterview', 'AICoding', 'ManualInterview', 'HR', 'TakeHome', 'FinalApproval'];
 
 // Round-aware skill suggestions appended to JD-derived skills
 const ROUND_SKILL_HINTS: Partial<Record<RoundType, string[]>> = {
   MCQ: ['Frontend Fundamentals', 'Debugging', 'Language Fluency'],
   Coding: ['DSA', 'Problem Solving', 'API Logic', 'Code Quality'],
   AIInterview: ['Communication', 'Architecture Thinking', 'Role Depth'],
+  AICoding: ['DSA', 'Problem Solving', 'Debugging', 'Code Quality', 'Communication'],
   ManualInterview: ['Architecture Thinking', 'Stakeholder Mgmt', 'Role Depth'],
   HR: ['Culture Fit', 'Motivation', 'Compensation Alignment'],
   TakeHome: ['Project Execution', 'Code Quality', 'Documentation'],
@@ -87,11 +88,11 @@ export default function TemplateBuilder() {
       orderIndex: rounds.length,
       type,
       label: meta.name,
-      durationMin: type === 'Coding' ? 90 : type === 'MCQ' ? 30 : 45,
+      durationMin: type === 'Coding' ? 90 : type === 'MCQ' ? 30 : type === 'AICoding' ? 45 : 45,
       mandatory: true,
       autoTrigger: type === 'Screening' || type === 'MCQ' || type === 'Coding',
       passThreshold: 65,
-      assessmentStatus: (type === 'MCQ' || type === 'Coding') ? 'not_built' : 'ready',
+      assessmentStatus: (type === 'MCQ' || type === 'Coding') ? 'not_built' : (type === 'AIInterview' || type === 'AICoding') ? 'not_built' : 'ready',
     };
     updateRounds(job.id, [...rounds, newRound]);
     setShowAddMenu(false);
@@ -193,7 +194,7 @@ export default function TemplateBuilder() {
                 selectedSkills={round.assessedSkills ?? []}
                 onSkillsChange={(skills) => updateRoundSkills(round.id, skills)}
                 onConfigureAI={
-                  round.type === 'AIInterview'
+                  round.type === 'AIInterview' || round.type === 'AICoding'
                     ? () => navigate(`/jobs/${job.id}/round/${round.id}/ai-config`)
                     : undefined
                 }
