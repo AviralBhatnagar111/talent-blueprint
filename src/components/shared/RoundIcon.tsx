@@ -1,5 +1,5 @@
 import {
-  ClipboardCheck, Brain, Code2, Mic, Users, UserCheck, FileText, CheckCircle2,
+  ClipboardCheck, Brain, Code2, Mic, Users, UserCheck, FileText, CheckCircle2, Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RoundType } from '@/types/hirenowx';
@@ -9,6 +9,7 @@ export const ROUND_META: Record<RoundType, { icon: any; name: string; descriptio
   MCQ: { icon: Brain, name: 'MCQ Assessment', description: 'AI-generated multiple-choice assessment', tone: 'bg-teal-light text-teal-deep' },
   Coding: { icon: Code2, name: 'Coding Round', description: 'Hands-on coding challenge with test cases', tone: 'bg-green-light text-hnxgreen-deep' },
   AIInterview: { icon: Mic, name: 'AI Avatar Interview', description: 'Voice-based AI interview with scoring', tone: 'bg-primary/10 text-primary' },
+  AICoding: { icon: Bot, name: 'AI Coding Round', description: 'AI-guided live coding session with adaptive prompts', tone: 'bg-teal-light text-teal-deep' },
   ManualInterview: { icon: Users, name: 'Manual Interview', description: 'Panel interview with team members', tone: 'bg-navy/10 text-navy' },
   HR: { icon: UserCheck, name: 'HR Round', description: 'Culture fit, compensation, offer alignment', tone: 'bg-warning-light text-warning' },
   TakeHome: { icon: FileText, name: 'Take-home Assignment', description: 'Extended project completed asynchronously', tone: 'bg-muted text-foreground/70' },
