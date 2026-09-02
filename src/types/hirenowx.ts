@@ -232,3 +232,91 @@ export interface PoolAnalyticsCoding extends PoolAnalyticsMCQ {
   plagiarismArmed: boolean;
   aiDetectionArmed: boolean;
 }
+
+// ============================================================
+// One-Way (async recorded) Interview
+// ============================================================
+export type OneWaySource = 'ai' | 'bank' | 'manual';
+export type OneWayCategory = 'Technical' | 'Behavioral' | 'Situational' | 'RoleSpecific' | 'Communication';
+
+export interface OneWayQuestion {
+  id: string;
+  text: string;
+  category: OneWayCategory;
+  competencyName: string;
+  skillTag: string;
+  difficulty: Difficulty;
+  thinkTimeSec: number;
+  answerTimeSec: number;
+  retakesAllowed: number;
+  mustAsk: boolean;
+  idealAnswerPoints: string[];
+  source: OneWaySource;
+  status: 'pending' | 'approved';
+}
+
+export interface OneWayConfig {
+  name: string;
+  mode: 'Video' | 'Audio';
+  defaultThinkTimeSec: number;
+  defaultAnswerTimeSec: number;
+  retakesAllowed: number;
+  practiceQuestion: boolean;
+  systemCheck: boolean;
+  idVerification: boolean;
+  proctoring: 'Off' | 'Standard' | 'Strict';
+  deadlineDays: number;
+  threshold: number;
+  instructions: string;
+  difficultyMix: { easy: number; medium: number; hard: number };
+}
+
+export interface OneWayAssessment {
+  id: string;
+  roundId: string;
+  config: OneWayConfig;
+  questions: OneWayQuestion[];
+  status: 'draft' | 'ready';
+}
+
+export interface OneWayAnswerEval {
+  questionId: string;
+  questionText: string;
+  competencyName: string;
+  durationSec: number;
+  retakesUsed: number;
+  transcript: string;
+  scores: { communication: number; relevance: number; depth: number; confidence: number; structure: number };
+  overall: number;
+  highlights: string[];
+  concerns: string[];
+  keywords: string[];
+}
+
+export interface OneWaySubmission {
+  submittedAt: string;
+  answers: OneWayAnswerEval[];
+  overallScore: number;
+  integrity: { faceMatch: number; tabSwitches: number; multipleFaces: number; audioClarity: number; deviceChanges: number };
+  aiSummary: string;
+  strengths: string[];
+  risks: string[];
+  recommendation: 'Strong Fit' | 'Fit' | 'Borderline' | 'Not a Fit';
+}
+
+export interface CandidateRecord {
+  id: string;
+  jobId: string;
+  name: string;
+  email: string;
+  initials: string;
+  appliedAt: string;
+  experience: string;
+  currentRole: string;
+  oneWayStatus: 'not_invited' | 'invited' | 'in_progress' | 'submitted' | 'reviewed';
+  invitedAt?: string;
+  submission?: OneWaySubmission;
+  decision?: 'shortlist' | 'hold' | 'reject';
+  recruiterNotes?: string;
+  recruiterScore?: number;
+}
