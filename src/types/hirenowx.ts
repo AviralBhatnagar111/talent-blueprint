@@ -44,6 +44,7 @@ export type RoundType =
   | 'Screening'
   | 'MCQ'
   | 'Coding'
+  | 'OneWayInterview'
   | 'AIInterview'
   | 'AICoding'
   | 'ManualInterview'
