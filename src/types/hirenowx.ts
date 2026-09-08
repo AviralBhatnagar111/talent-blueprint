@@ -320,3 +320,75 @@ export interface CandidateRecord {
   recruiterNotes?: string;
   recruiterScore?: number;
 }
+
+// ============================================================
+// Personality Assessment (Big Five / FFM)
+// ============================================================
+export type BigFiveTrait =
+  | 'Conscientiousness'
+  | 'Extraversion'
+  | 'Agreeableness'
+  | 'Openness'
+  | 'Emotional Stability';
+
+export type FacetRelevance = 'High' | 'Moderate' | 'Low';
+export type ItemDirection = 'Positive' | 'Reverse';
+
+export interface PersonalityFacet {
+  id: string;
+  name: string;
+  trait: BigFiveTrait;
+  relevance: FacetRelevance;
+  preferredMin: number;
+  preferredMax: number;
+  direction: 'Higher preferred' | 'Balanced' | 'Lower preferred';
+  descriptor: string;
+}
+
+export interface PersonalityItem {
+  id: string;
+  order: number;
+  text: string;
+  trait: BigFiveTrait;
+  facetId: string;
+  facetName: string;
+  direction: ItemDirection;
+  status: 'active' | 'locked' | 'removed';
+  reviewSuggested?: boolean;
+  usageCount: number;
+  reviewed: boolean;
+  language: string;
+  source: 'Validated Item Bank';
+}
+
+export interface PersonalityAssessment {
+  id: string;
+  roundId: string;
+  name: string;
+  roleProfileName: string;
+  itemCount: number;
+  durationMin: number;
+  items: PersonalityItem[];
+  status: 'draft' | 'ready';
+}
+
+export interface PersonalityTraitScore {
+  trait: BigFiveTrait;
+  score: number;
+  facets: Array<{ facetId: string; name: string; score: number; relevance: FacetRelevance; inRange: boolean }>;
+}
+
+export interface PersonalityReport {
+  candidateId: string;
+  candidateName: string;
+  completedAt: string;
+  answered: number;
+  total: number;
+  autoSubmitted: boolean;
+  roleAlignment: number;
+  alignmentLabel: 'Strong Alignment' | 'Good Alignment' | 'Partial Alignment' | 'Limited Alignment';
+  traits: PersonalityTraitScore[];
+  strengths: string[];
+  areasToExplore: string[];
+  summary: string;
+}
